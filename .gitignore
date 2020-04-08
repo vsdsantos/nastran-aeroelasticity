@@ -1,0 +1,11 @@
+*.bdf
+*.op2
+*.log
+*.f04
+*.f06
+*.MASTER
+*.IFPDAT
+*.DBALL
+
+.RDataFiles
+.ipynb_checkpoints

@@ -4,8 +4,11 @@ import sys
 from PyFemap import constants
 
 
-# Femap Connection Interface
 class Femap:
+    """
+    Femap Connection Interface
+    """
+
     def __init__(self):
         try:
             existingobj = pythoncom.connect(PyFemap.model.CLSID)
