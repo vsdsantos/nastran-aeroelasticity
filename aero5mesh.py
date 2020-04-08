@@ -16,11 +16,11 @@ if __name__ == '__main__':
     femap = Femap()
     femap.export_bdf_model(input_file)
     analysis.import_from_bdf(input_file)
+    analysis.load_analysis_from_yaml(os.path.join(base_path, r'analysis.yml'))
     spanel = SuperAeroPanel5(femap)
     spanel.init_from_femap()
 
     analysis.add_superpanel(spanel)
-    analysis.create_subcase(1, os.path.join(base_path, r'analysis.yml'))
     analysis.write_cards(1)
     analysis.export_to_bdf(output_file)
 

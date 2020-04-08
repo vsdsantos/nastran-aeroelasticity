@@ -7,5 +7,7 @@
 *.IFPDAT
 *.DBALL
 
+*.xlsx
+
 .RDataFiles
 .ipynb_checkpoints

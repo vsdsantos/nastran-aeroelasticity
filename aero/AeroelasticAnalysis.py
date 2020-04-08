@@ -9,6 +9,8 @@ class AeroelasticAnalysis:
         self.idutil = IDUtility(self.model)
         self.subcases = {}
         self.superpanels = []
+        self.params = {}
+        self.diags = []
 
     def import_from_bdf(self, bdf_file):
         # load models and utility
@@ -17,12 +19,10 @@ class AeroelasticAnalysis:
         print("Loading base bdf model to pyNastran...")
         base_model.read_bdf(bdf_file)
 
-        # print(base_model.get_bdf_stats())
-
         # clears problematic entries from previous analysis
         print("Sanitizing model...")
         cards = list(base_model.card_count.keys())
-        # TODO: make whitelist of structural elements, properties and spcs
+        # TODO: make whitelist of structural elements, properties and spcs or resolve the importing other way
         black_list = ['ENDDATA', 'PARAM', 'EIGR', 'CAERO1', 'CAERO2', 'PAERO1', 'PAERO2', 'SPLINE1', 'SPLINE2', 'EIGRL']
         sanit_card_keys = list(filter(lambda c: c not in black_list, cards))
         sanit_cards = base_model.get_cards_by_card_types(sanit_card_keys)
@@ -37,15 +37,27 @@ class AeroelasticAnalysis:
 
         print('Done!')
 
+    def load_analysis_from_yaml(self, yaml_file):
+        with open(yaml_file, 'r') as file:
+            data = yaml.safe_load(file)
+        self.params = data['params']
+        self.diags = data['diags']
+        for key, subcase in data['subcases'].items():
+            self.create_subcase(key, data=subcase)
+
     def add_superpanel(self, superpanel):
         self.superpanels.append(superpanel)
 
-    def create_subcase(self, sub_id, config_file=None):
+    def create_subcase(self, sub_id, config_file=None, data=None):
         assert sub_id not in self.subcases.keys()
-        if config_file is None:
+        if config_file is None and data is None:
             self.subcases[sub_id] = FlutterAnalysis()
-        else:
+        elif config_file is None and data is not None:
+            self.subcases[sub_id] = FlutterAnalysis.create_from_data(data)
+        elif config_file is not None and data is None:
             self.subcases[sub_id] = FlutterAnalysis.create_from_yaml_file(config_file)
+        else:
+            raise Exception('You cannot specify a config file and a data at the same time.')
 
     def write_cards_from_subcase(self, sub_id):
         analysis = self.subcases[sub_id]
@@ -116,7 +128,7 @@ class AeroelasticAnalysis:
             cords.append(
                 self.model.add_cord2r(self.idutil.get_next_coord_id(),
                                       origin,
-                                      panel.orthogonal_vector,
+                                      origin + panel.orthogonal_vector,
                                       pxz_i))
 
             # CAERO5 element
@@ -169,9 +181,13 @@ class AeroelasticAnalysis:
 
         # Executive Control
         self.model.sol = 145  # Aerodynamic Flutter
+        diagnostic = 'DIAG '
+        for diag in self.diags:
+            diagnostic += '%d,' % diag
+        self.model.executive_control_lines = [diagnostic]
 
         # Case Control
-        cc = CaseControlDeck(['ECHO = BOTH'])
+        cc = CaseControlDeck([])
 
         for key in self.subcases.keys():
             fmethod, method = self.write_cards_from_subcase(key)
@@ -182,15 +198,12 @@ class AeroelasticAnalysis:
             cc.add_parameter_to_local_subcase(1, 'SPC = %d' % list(self.model.spcs.keys())[0])
         self.model.case_control_deck = cc
 
-        # model.add_param('POST', [-1])  # output op2 file
-        self.model.add_param('UNITSYS', ['LBF-IN-C'])  # misc units information
-
-        # reference velocity param card
-        self.model.add_param(key='VREF', values=[1.0])
-        self.model.add_param(key='GRDPNT', values=[1])
-        self.model.add_param(key='WTMASS', values=[0.0025907])  # 1/g -> entries are in "weight density"
-        self.model.add_param(key='COUPMASS', values=[1])
-        self.model.add_param(key='OPPHIPA', values=[1])
+        # params
+        for key, param in self.params.items():
+            if hasattr(param, '__iter__'):
+                self.model.add_param(key=key, values=list(param))
+            else:
+                self.model.add_param(key=key, values=[param])
 
         for spanel in self.superpanels:
             self.write_superpanel_cards(spanel, self.subcases[subcase_id])
@@ -235,9 +248,7 @@ class FlutterAnalysis:
         self.method = method
 
     @classmethod
-    def create_from_yaml_file(cls, file):
-        with open(file, 'r') as file:
-            data = yaml.safe_load(file)
+    def create_from_data(cls, data):
         return FlutterAnalysis(
             ref_rho=data['ref_rho'],
             ref_chord=data['ref_chord'],
@@ -250,6 +261,12 @@ class FlutterAnalysis:
             velocities=data['velocities'],
             method=data['method']
         )
+
+    @classmethod
+    def create_from_yaml_file(cls, file):
+        with open(file, 'r') as file:
+            data = yaml.safe_load(file)
+        return FlutterAnalysis.create_from_data(data)
 
 
 def _get_last_id_from_ids(elements):

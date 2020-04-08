@@ -1,31 +1,42 @@
-ref_rho: 1.1468e-7
-ref_chord: 10.
-ref_velocity: 12.
-n_modes: 15
-frequency_limits:
-  - 0.0
-  - 1000.0
-densities_ratio:
-  - .5
-machs:
-  - 2.0
-  - 3.0
-alphas:
-  - 0.0
-  - 0.0
-reduced_frequencies:
-  - .001
-  - .1
-  - .2
-  - .4
-velocities:
-  - 21600.0
-  - 22800.0
-  - 23400.0
-  - 24000.0
-  - 26400.0
-  - 28800.0
-  - 29400.0
-  - 30000.0
-  - 31200.0
-method: 'PK'
+diags:
+  - 18  # print the set2 grid points
+params:
+  VREF: 12.0  # from in/s to ft/s
+  WTMASS: 0.0025907  # 1/g -> entries are in "weight density"
+  GRDPNT: 1
+  COUPMASS: 1
+#  OPPHIPA: 1
+  POST: -1  # output op2 file
+  UNITSYS: 'LBF-IN-C'  # misc units information
+subcases:
+  1:
+    ref_rho: 1.1468e-7
+    ref_chord: 10.
+    n_modes: 15
+    method: 'PK'
+    frequency_limits:
+      - 0.0
+      - 1500.0
+    densities_ratio:
+      - .5
+    machs:
+      - 2.0
+      - 3.0
+    alphas:
+      - 0.0
+      - 0.0
+    reduced_frequencies:
+      - .001
+      - .1
+      - .2
+      - .4
+    velocities:
+      - 21600.0
+      - 22800.0
+      - -23400.0
+      - 24000.0
+      - 26400.0
+      - 28800.0
+      - 29400.0
+      - 30000.0
+      - 31200.0
