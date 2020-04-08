@@ -1,7 +1,7 @@
 import pythoncom
-import PyFemap
+from femap import PyFemap
 import sys
-from PyFemap import constants
+from femap.PyFemap import constants
 
 
 class Femap:

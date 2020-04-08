@@ -1,4 +1,4 @@
-from AeroelasticAnalysis import FlutterAnalysis
+from aero.AeroelasticAnalysis import FlutterAnalysis
 
 import numpy as np
 import matplotlib.pyplot as plt

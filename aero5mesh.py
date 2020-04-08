@@ -1,8 +1,8 @@
-from AeroelasticAnalysis import AeroelasticAnalysis
-from AeroelasticPanels import SuperAeroPanel5
-from AeroelasticPostProcessing import plot_flutter_data, plot_critical_flutter_data, export_flutter_data, read_f06
+from aero.AeroelasticAnalysis import AeroelasticAnalysis
+from aero.AeroelasticPanels import SuperAeroPanel5
+from aero.AeroelasticPostProcessing import plot_flutter_data, plot_critical_flutter_data, export_flutter_data, read_f06
 from pyNastran.utils.nastran_utils import run_nastran
-from femap import Femap
+from femap.femap import Femap
 import os
 
 if __name__ == '__main__':

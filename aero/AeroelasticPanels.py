@@ -1,4 +1,4 @@
-from femap import Femap
+from femap.femap import Femap
 import numpy as np
 
 
