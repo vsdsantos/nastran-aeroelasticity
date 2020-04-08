@@ -7,6 +7,9 @@ The project uses the pyNastran, the Femap's COM interface and the python scienti
 Currently, the focus is to use the aerodynamic Piston Theory, available on NASTRAN, to model the problem,
 but it can be extended to use with any aerodynamic element.
 
+This software is result of a research project of the Department of Mechanical Engineering
+at the Federal University of Minas Gerais (UFMG).
+
 ***
 
 To use the Femap interface you must `pip install pywin32` and run the script
