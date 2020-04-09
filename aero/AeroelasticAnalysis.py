@@ -78,7 +78,7 @@ class AeroelasticAnalysis:
 
         # real eigenvalue method card
         method = self.model.add_eigrl(sid=self.idutil.get_next_method_id(),
-                                      norm='MAX',
+                                      norm='MASS',
                                       nd=analysis.n_modes,
                                       v1=analysis.frequency_limits[0],
                                       v2=analysis.frequency_limits[1])
@@ -192,6 +192,7 @@ class AeroelasticAnalysis:
         for key in self.subcases.keys():
             fmethod, method = self.write_cards_from_subcase(key)
             cc.create_new_subcase(key)
+            cc.add_parameter_to_local_subcase(1, 'DISPLACEMENT = ALL')
             cc.add_parameter_to_local_subcase(1, 'FMETHOD = %d' % fmethod)
             cc.add_parameter_to_local_subcase(1, 'METHOD = %d' % method)
             # BC ID TODO: let user select the SPC

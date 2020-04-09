@@ -26,7 +26,13 @@ if __name__ == '__main__':
 
     run_nastran(output_file, nastran_cmd=nastran_exe, keywords=['old=no'])
 
-    modes, critical_modes, flutter = read_f06(output_file.replace('.bdf', '.f06'), analysis.subcases[1])
-    plot_flutter_data(modes, analysis.subcases[1])
-    plot_critical_flutter_data(critical_modes, analysis.subcases[1])
-    export_flutter_data(modes, critical_modes, flutter, analysis.subcases[1], os.path.join(base_path, 'output-model.xlsx'))
+    for key, subcase in analysis.subcases.items():
+        modes, critical_modes, flutter = read_f06(output_file.replace('.bdf', '.f06'), subcase)
+        searched_modes = list(filter(lambda m: m['MODE'] <= subcase.n_modes, modes))
+        plot_flutter_data(searched_modes, subcase)
+        searched_crit_modes = list(filter(lambda m: m['MODE'] <= subcase.n_modes, critical_modes))
+        if len(searched_crit_modes):
+            plot_critical_flutter_data(searched_crit_modes)
+        else:
+            print('No flutter encountered in this analysis.')
+        # export_flutter_data(modes, critical_modes, flutter, analysis.subcases[1], os.path.join(base_path, 'output-model.xlsx'))

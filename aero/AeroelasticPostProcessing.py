@@ -91,99 +91,55 @@ def read_f06(filename, analysis: FlutterAnalysis):
     return modes, critical_modes, flutter_conditions
 
 
-def plot_flutter_data(modes, analysis):
+def plot_figure(modes, x_key, y_key, labels, title, xlabel='x', ylabel='y'):
     figsize = (9, 5)
-    for i, mach in enumerate(analysis.machs):
-        m_modes = filter(lambda m: m['MACH NUMBER'] == mach and m['MODE'] <= analysis.n_modes, modes)
-
-        fig1 = plt.figure(i * 3 + 1, figsize=figsize)
-        fig2 = plt.figure(i * 3 + 2, figsize=figsize)
-        fig3 = plt.figure(i * 3 + 3, figsize=figsize)
-
-        fig1.suptitle(r'V-g, Mach {}, Density Ratio {}, AoA {}°'.format(mach, 0.5, 0))
-        fig2.suptitle(r'V-f, Mach {}, Density Ratio {}, AoA {}°'.format(mach, 0.5, 0))
-        fig3.suptitle(r'Complex Eigenvalues, Mach {}, Density Ratio {}, AoA {}°'.format(mach, 0.5, 0))
-
-        for mode in m_modes:
-            ax = fig1.gca()
-            ax.plot(mode['VELOCITY'], mode['DAMPING'], '.-', label='Mode {}'.format(mode['MODE']))
-
-            ax = fig2.gca()
-            ax.plot(mode['VELOCITY'], mode['FREQUENCY'], '.-', label='Mode {}'.format(mode['MODE']))
-
-            ax = fig3.gca()
-            ax.plot(mode['REALEIGVAL'], mode['IMAGEIGVAL'], label='Mode {}'.format(mode['MODE']))
-
-        ax = fig1.gca()
-        ax.set_xlabel('Velocidade')
-        ax.set_ylabel('Amortecimento')
-        ax.grid()
-        ax.legend(bbox_to_anchor=(1.2, 1), fancybox=True, shadow=True)
-
-        ax = fig2.gca()
-        ax.set_xlabel('Velocidade')
-        ax.set_ylabel('Frequência')
-        ax.grid()
-        ax.legend(bbox_to_anchor=(1.2, 1), fancybox=True, shadow=True)
-
-        ax = fig3.gca()
-        ax.set_xlabel('Real')
-        ax.set_ylabel('Imag')
-        ax.grid()
-        ax.legend(bbox_to_anchor=(1.2, 1), fancybox=True, shadow=True)
-
+    fig = plt.figure(figsize=figsize)
+    fig.suptitle(title)
+    ax = fig.gca()
+    for mode, label in zip(list(modes), labels):
+        ax.plot(mode[x_key], mode[y_key], '.-', label=label)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    ax.grid()
+    ax.legend(bbox_to_anchor=(1.2, 1), fancybox=True, shadow=True)
     plt.show()
 
 
-def plot_critical_flutter_data(modes, analysis):
-    figsize = (9, 5)
+def plot_vg(modes, labels, title):
+    plot_figure(modes, 'VELOCITY', 'DAMPING', labels, title, 'Velocidade (m/s)', 'Amortecimento')
 
-    fig1 = plt.figure(4, figsize=figsize)
-    fig2 = plt.figure(5, figsize=figsize)
-    # fig3 = plt.figure(6, figsize=figsize)
 
-    fig1.suptitle(r'V-g, Density Ratio {}, AoA {}°'.format(0.5, 0))
-    fig2.suptitle(r'V-f, Density Ratio {}, AoA {}°'.format(0.5, 0))
-    # fig3.suptitle(r'Complex Eigenvalues, Density Ratio {}, AoA {}°'.format(0.5, 0))
+def plot_vf(modes, labels, title):
+    plot_figure(modes, 'VELOCITY', 'FREQUENCY', labels, title, 'Velocidade (m/s)', 'Frequência (Hz)')
 
-    ax = fig1.gca()
-    ax.set_xlabel('Velocidade')
-    ax.set_ylabel('Amortecimento')
-    ax.grid()
-    #
 
-    ax = fig2.gca()
-    ax.set_xlabel('Velocidade')
-    ax.set_ylabel('Frequência')
-    ax.grid()
-    # ax.legend(bbox_to_anchor=(1.2, 1), fancybox=True, shadow=True)
+def plot_complex(modes, labels, title):
+    plot_figure(modes, 'VELOCITY', 'DAMPING', title, labels, 'Real', 'Imag')
 
-    # ax = fig3.gca()
-    # ax.set_xlabel('Real')
-    # ax.set_ylabel('Imag')
-    # ax.grid()
-    # ax.legend(bbox_to_anchor=(1.2, 1), fancybox=True, shadow=True)
 
-    for mode in filter(lambda m: m['MODE'] <= analysis.n_modes, modes):
-        ax = fig1.gca()
-        ax.plot(mode['VELOCITY'],
-                mode['DAMPING'],
-                '.-',
-                label='Mode {}; Mach {}'.format(mode['MODE'], mode['MACH NUMBER']))
-        ax.legend(bbox_to_anchor=(1.1, 1), fancybox=True, shadow=True)
+def filter_modes(modes, mach, dr):
+    return filter(lambda m: m['MACH NUMBER'] == mach and m['DENSITY RATIO'] == dr, modes)
 
-        ax = fig2.gca()
-        ax.plot(mode['VELOCITY'],
-                mode['FREQUENCY'],
-                '.-',
-                label='Mode {}; Mach {}'.format(mode['MODE'], mode['MACH NUMBER']))
-        ax.legend(bbox_to_anchor=(1.1, 1), fancybox=True, shadow=True)
 
-        # ax = fig3.gca()
-        # ax.plot(mode['REALEIGVAL'],
-        #         mode['IMAGEIGVAL'],
-        #         label='Mode {}; Mach {}'.format(mode['MODE'], mode['MACH NUMBER']))
-        # ax.legend(bbox_to_anchor=(1.1, 1), fancybox=True, shadow=True)
+def plot_flutter_data(modes, analysis: FlutterAnalysis):
+    for mach in analysis.machs:
+        for dens_ratio in analysis.densities_ratio:
+            modes = list(filter_modes(modes, mach, dens_ratio))
+            labels = ['Mode {}'.format(mode['MODE']) for mode in modes]
+
+            plot_vg(modes, labels, 'V-g, Mach {}, Density Ratio {}, AoA {}°'.format(mach, dens_ratio, 0))
+            plot_vf(modes, labels, 'V-f, Mach {}, Density Ratio {}, AoA {}°'.format(mach, dens_ratio, 0))
+            plot_complex(modes, labels,
+                         'Autovalores Complexos, Mach {}, Density Ratio {}, AoA {}°'.format(mach, dens_ratio, 0))
+    plt.show()
+
+
+def plot_critical_flutter_data(modes):
+    labels = ['Mode {}; Mach {}'.format(mode['MODE'], mode['MACH NUMBER']) for mode in modes]
+
+    plot_vg(modes, labels, 'V-g')
+    plot_vf(modes, labels, 'V-f')
+    plot_complex(modes, labels, 'Autovalores Complexos')
     plt.show()
 
 
