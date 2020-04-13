@@ -7,55 +7,56 @@ params:
   COUPMASS: 1  # Coupled Mass Matrix --> more precision
 #  OPPHIPA: 1
   POST: -1  # output op2 file
-  UNITSYS: 'LBF-IN-C'  # misc units information
+#  UNITSYS: 'N-MM-C'  # misc units information
+  LMODES: 15 # limit the number of modes used on flutter analysis
 subcases:
   1:
-    ref_rho: 1.23E-12  # 1.1468e-7
-    ref_chord: 1000. # 10.
+    type: 'PANELFLUTTER'
+    plate_stiffness: 22630.
+    vref: 1000.
+    ref_rho: 1.225E-12  # 1.1468e-7
+    ref_chord: 300. # 10.
     n_modes: 15
-    method: 'PK'
+    method: 'PKS'
     frequency_limits:
       - 0.0
       - 1000.0
     densities_ratio:
       - .5
     machs:
-      - 2.0
       - 3.0
+#      - 3.0
+#      - 4.0
+#      - 5.0
     alphas:
       - 0.0
-      - 0.0
+#      - 0.0
+#      - 0.0
+#      - 0.0
     reduced_frequencies:
       - .001
       - .1
       - .2
       - .4
     velocities:
-      - 589800.
-      - 599420.
-      - 609040.
-      - 618660.
-      - 628280.
-      - 637900.
-      - 647520.
-      - 657140.
-      - 666760.
-      - 676380.
-      - 686000.
-      - 695620.
-      - 705240.
-      - 714860.
-      - 724480.
-      - 734100.
-
-
-
-#      - 21600.0
-#      - 22800.0
-#      - -23400.0
-#      - 24000.0
-#      - 26400.0
-#      - 28800.0
-#      - -29400.0
-#      - 30000.0
-#      - 31200.0
+      - 822000.
+      - 834195.
+      - 846390.
+      - 858585.
+      - 870780.
+      - 882975.
+      - 895170.
+      - 907365.
+      - 919560.
+      - 931755.
+      - 943950.
+      - 956145.
+      - 968340.
+      - 980535.
+      - 992730.
+      - 1004925.
+      - 1017120.
+      - 1029315.
+      - 1041510.
+      - 1053705.
+      - 1065900.

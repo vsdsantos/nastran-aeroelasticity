@@ -6,6 +6,10 @@
 *.MASTER
 *.IFPDAT
 *.DBALL
+*.bat
+*.rcf
+
+sandbox
 
 *.xlsx
 

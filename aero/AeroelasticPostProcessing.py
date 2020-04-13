@@ -1,4 +1,6 @@
-from aero.AeroelasticAnalysis import FlutterAnalysis
+from typing import Union
+
+from aero.AeroelasticAnalysis import FlutterAnalysis, PanelFlutterAnalysis
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -25,7 +27,7 @@ FLUTTER_DATA_KEYS = {
 }
 
 
-def read_f06(filename, analysis: FlutterAnalysis):
+def read_f06(filename, analysis: Union[FlutterAnalysis, PanelFlutterAnalysis]):
     with open(filename, 'r') as file:
         content = file.readlines()
 
@@ -69,12 +71,15 @@ def read_f06(filename, analysis: FlutterAnalysis):
             idx = np.where(data['DAMPING'] > 0)[0][0] + 1
             critic_vel = np.interp(0, data['DAMPING'][:idx], data['VELOCITY'][:idx])
             critic_freq = np.interp(critic_vel, data['VELOCITY'][:idx], data['FREQUENCY'][:idx])
-            D = 65.93
-            vref = 1
-            a = analysis.ref_chord
-            rho = analysis.ref_rho
-            lamb_critc = (rho * (critic_vel * vref) ** 2) * (a ** 3) / (
-                    np.sqrt(data['MACH NUMBER'] ** 2 - 1) * D)
+            if type(analysis) is PanelFlutterAnalysis:
+                D = analysis.plate_stiffness
+                vref = analysis.vref
+                a = analysis.ref_chord
+                rho = analysis.ref_rho
+                lamb_critc = (rho * (critic_vel * vref) ** 2) * (a ** 3) / (
+                        np.sqrt(data['MACH NUMBER'] ** 2 - 1) * D)
+            else:
+                lamb_critc = None
             critic_data = {
                 'VELOCITY': critic_vel,
                 'FREQUENCY': critic_freq,
@@ -91,13 +96,17 @@ def read_f06(filename, analysis: FlutterAnalysis):
     return modes, critical_modes, flutter_conditions
 
 
-def plot_figure(modes, x_key, y_key, labels, title, xlabel='x', ylabel='y'):
+def filter_modes_by_list(modes, mode_list):
+    return list(filter(lambda m: m['MODE'] in mode_list, modes))
+
+
+def plot_figure(modes, x_key, y_key, labels, title, xlabel='x', ylabel='y', marker='.-'):
     figsize = (9, 5)
     fig = plt.figure(figsize=figsize)
     fig.suptitle(title)
     ax = fig.gca()
     for mode, label in zip(list(modes), labels):
-        ax.plot(mode[x_key], mode[y_key], '.-', label=label)
+        ax.plot(mode[x_key], mode[y_key], marker, label=label)
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     ax.grid()
@@ -114,7 +123,7 @@ def plot_vf(modes, labels, title):
 
 
 def plot_complex(modes, labels, title):
-    plot_figure(modes, 'VELOCITY', 'DAMPING', title, labels, 'Real', 'Imag')
+    plot_figure(modes, 'REALEIGVAL', 'IMAGEIGVAL', labels, title, 'Real', 'Imag')
 
 
 def filter_modes(modes, mach, dr):
@@ -129,8 +138,8 @@ def plot_flutter_data(modes, analysis: FlutterAnalysis):
 
             plot_vg(modes, labels, 'V-g, Mach {}, Density Ratio {}, AoA {}°'.format(mach, dens_ratio, 0))
             plot_vf(modes, labels, 'V-f, Mach {}, Density Ratio {}, AoA {}°'.format(mach, dens_ratio, 0))
-            plot_complex(modes, labels,
-                         'Autovalores Complexos, Mach {}, Density Ratio {}, AoA {}°'.format(mach, dens_ratio, 0))
+            # plot_complex(modes, labels,
+            #              'Autovalores Complexos, Mach {}, Density Ratio {}, AoA {}°'.format(mach, dens_ratio, 0))
     plt.show()
 
 
@@ -139,7 +148,7 @@ def plot_critical_flutter_data(modes):
 
     plot_vg(modes, labels, 'V-g')
     plot_vf(modes, labels, 'V-f')
-    plot_complex(modes, labels, 'Autovalores Complexos')
+    # plot_complex(modes, labels, 'Autovalores Complexos')
     plt.show()
 
 

@@ -53,7 +53,10 @@ class AeroelasticAnalysis:
         if config_file is None and data is None:
             self.subcases[sub_id] = FlutterAnalysis()
         elif config_file is None and data is not None:
-            self.subcases[sub_id] = FlutterAnalysis.create_from_data(data)
+            if data['type'] == 'PANELFLUTTER':
+                self.subcases[sub_id] = PanelFlutterAnalysis.create_from_data(data)
+            else:
+                self.subcases[sub_id] = FlutterAnalysis.create_from_data(data)
         elif config_file is not None and data is None:
             self.subcases[sub_id] = FlutterAnalysis.create_from_yaml_file(config_file)
         else:
@@ -174,7 +177,7 @@ class AeroelasticAnalysis:
                                    # and still model the plate bending (with N chord-wise elements).
                                    dthx=-1.,
                                    dthy=-1.,
-                                   dz=0)
+                                   dz=0.)
 
     def write_cards(self, subcase_id):
         print("Writing cards...")
@@ -192,7 +195,8 @@ class AeroelasticAnalysis:
         for key in self.subcases.keys():
             fmethod, method = self.write_cards_from_subcase(key)
             cc.create_new_subcase(key)
-            cc.add_parameter_to_local_subcase(1, 'DISPLACEMENT = ALL')
+            cc.add_parameter_to_local_subcase(1, 'ECHO = BOTH')
+            cc.add_parameter_to_local_subcase(1, 'DISP = ALL')
             cc.add_parameter_to_local_subcase(1, 'FMETHOD = %d' % fmethod)
             cc.add_parameter_to_local_subcase(1, 'METHOD = %d' % method)
             # BC ID TODO: let user select the SPC
@@ -218,7 +222,7 @@ class AeroelasticAnalysis:
     def export_to_bdf(self, output_bdf):
         # Write output
         print('Writing bdf file...')
-        self.model.write_bdf(output_bdf)
+        self.model.write_bdf(output_bdf, enddata=True)
         print('Done!')
 
 
@@ -251,16 +255,16 @@ class FlutterAnalysis:
     @classmethod
     def create_from_data(cls, data):
         return FlutterAnalysis(
-            ref_rho=data['ref_rho'],
-            ref_chord=data['ref_chord'],
-            n_modes=data['n_modes'],
-            frequency_limits=data['frequency_limits'],
-            densities_ratio=data['densities_ratio'],
-            machs=data['machs'],
-            alphas=data['alphas'],
-            reduced_frequencies=data['reduced_frequencies'],
-            velocities=data['velocities'],
-            method=data['method']
+            data['ref_rho'],
+            data['ref_chord'],
+            data['n_modes'],
+            data['frequency_limits'],
+            data['densities_ratio'],
+            data['machs'],
+            data['alphas'],
+            data['reduced_frequencies'],
+            data['velocities'],
+            data['method']
         )
 
     @classmethod
@@ -268,6 +272,29 @@ class FlutterAnalysis:
         with open(file, 'r') as file:
             data = yaml.safe_load(file)
         return FlutterAnalysis.create_from_data(data)
+
+
+class PanelFlutterAnalysis(FlutterAnalysis):
+
+    def __init__(self, *args, plate_stiffness=None, vref=None):
+        super().__init__(*args)
+        self.plate_stiffness = plate_stiffness
+        self.vref = vref
+
+    @classmethod
+    def create_from_data(cls, data):
+        return PanelFlutterAnalysis(data['ref_rho'],
+                                    data['ref_chord'],
+                                    data['n_modes'],
+                                    data['frequency_limits'],
+                                    data['densities_ratio'],
+                                    data['machs'],
+                                    data['alphas'],
+                                    data['reduced_frequencies'],
+                                    data['velocities'],
+                                    data['method'],
+                                    plate_stiffness=data['plate_stiffness'],
+                                    vref=data['vref'])
 
 
 def _get_last_id_from_ids(elements):
