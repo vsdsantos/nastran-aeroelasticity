@@ -44,7 +44,7 @@ class Femap:
         group_entity.SelectID(text)
         return group_entity
 
-    def get_group_id(self, text: str) -> PyFemap.Group:
+    def get_group_id(self, text: str) -> int:
         return self.get_group(text).ID
 
     def get_node(self, text: str) -> PyFemap.Node:

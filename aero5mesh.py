@@ -3,7 +3,7 @@ import pathlib
 
 from pyNastran.utils.nastran_utils import run_nastran
 
-from aero.AeroelasticAnalysis import AeroelasticAnalysis
+from aero.AeroelasticAnalysis import FlutterAnalysisModel
 from aero.AeroelasticPanels import SuperAeroPanel5
 from aero.AeroelasticPostProcessing import plot_flutter_data, plot_critical_flutter_data, read_f06
 from femap.femap import Femap
@@ -14,11 +14,11 @@ if __name__ == '__main__':
     output_file = os.path.join(base_path, r'sandbox\output-model.bdf')
     nastran_exe = r'D:\Programs\MSC.Software\NaPa_SE\2019fp1\Nastran\bin\nastran.exe'
 
-    analysis = AeroelasticAnalysis()
+    analysis = FlutterAnalysisModel()
     femap = Femap()
     femap.export_bdf_model(input_file)
     analysis.import_from_bdf(input_file)
-    analysis.load_analysis_from_yaml(os.path.join(base_path, r'analysis.yml'))
+    analysis.load_analysis_from_yaml(os.path.join(base_path, r'subcase.yml'))
     spanel = SuperAeroPanel5()
     spanel.init_from_femap(femap)
 
@@ -43,4 +43,4 @@ if __name__ == '__main__':
                 print('\tLAMBDA \t{}'.format(flut['LAMBDA']))
         else:
             print('No flutter encountered in subcase {}.'.format(key))
-        # export_flutter_data(modes, critical_modes, flutter, analysis.subcases[1], os.path.join(base_path, 'output-model.xlsx'))
+        # export_flutter_data(modes, critical_modes, flutter, subcase[1], os.path.join(base_path, 'output-model.xlsx'))

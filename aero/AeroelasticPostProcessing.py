@@ -59,7 +59,7 @@ def read_f06(filename, analysis: Union[FlutterAnalysis, PanelFlutterAnalysis]):
 
         data['KFREQ'] = np.array(list(map(lambda args: args[0], raw_data)))
         data['inv_KFREQ'] = np.array(list(map(lambda args: args[1], raw_data)))
-        data['VELOCITY'] = np.array(list(map(lambda args: args[2], raw_data)))
+        data['VELOCITY'] = np.absolute(np.array(list(map(lambda args: args[2], raw_data))))  # makes velocities positive
         data['DAMPING'] = np.array(list(map(lambda args: args[3], raw_data)))
         data['FREQUENCY'] = np.array(list(map(lambda args: args[4], raw_data)))
         data['REALEIGVAL'] = np.array(list(map(lambda args: args[5], raw_data)))

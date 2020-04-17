@@ -1,23 +1,24 @@
 from pyNastran.bdf.bdf import BDF, CaseControlDeck
+from abc import ABC, abstractmethod
 import yaml
 
 
-class AeroelasticAnalysis:
+class AnalysisModel(ABC):
 
     def __init__(self):
         self.model = BDF(debug=False)
         self.idutil = IDUtility(self.model)
         self.subcases = {}
-        self.superpanels = []
         self.params = {}
         self.diags = []
+        self.sol = None
 
-    def import_from_bdf(self, bdf_file):
+    def import_from_bdf(self, bdf_file_name: str):
         # load models and utility
         base_model = BDF()
 
         print("Loading base bdf model to pyNastran...")
-        base_model.read_bdf(bdf_file)
+        base_model.read_bdf(bdf_file_name)
 
         # clears problematic entries from previous analysis
         print("Sanitizing model...")
@@ -37,73 +38,94 @@ class AeroelasticAnalysis:
 
         print('Done!')
 
-    def load_analysis_from_yaml(self, yaml_file):
-        with open(yaml_file, 'r') as file:
+    def load_analysis_from_yaml(self, yaml_file_name: str):
+        with open(yaml_file_name, 'r') as file:
             data = yaml.safe_load(file)
         self.params = data['params']
         self.diags = data['diags']
         for key, subcase in data['subcases'].items():
-            self.create_subcase(key, data=subcase)
+            self.create_subcase_from_data(key, data=subcase)
+
+    @abstractmethod
+    def create_subcase_from_file(self, sub_id, subcase_file_name):
+        pass
+
+    @abstractmethod
+    def create_subcase_from_data(self, sub_id, data):
+        pass
+
+    @abstractmethod
+    def create_subcase(self, sub_id, sub_type):
+        pass
+
+    @abstractmethod
+    def write_cards_from_subcase(self, sub_id):
+        pass
+
+    def write_executive_control_cards(self):
+        # Executive Control
+        self.model.sol = self.sol
+
+        # TODO: diagnostic doesn't work
+        # diagnostic = 'DIAG '
+        # for diag in self.diags:
+        #     diagnostic += '%d,' % diag
+        # self.model.executive_control_lines = [diagnostic]
+
+    def write_case_control_cards(self):
+        # Case Control
+        cc = CaseControlDeck([])
+
+        for key in self.subcases.keys():
+            cc.create_new_subcase(key)
+            cc.add_parameter_to_local_subcase(1, 'ECHO = BOTH')  # TODO: make object property and file configurable
+            cc.add_parameter_to_local_subcase(1, 'DISP = ALL')
+            # BC ID TODO: let user select the SPC
+            cc.add_parameter_to_local_subcase(1, 'SPC = %d' % list(self.model.spcs.keys())[0])
+        self.model.case_control_deck = cc
+
+    def write_params(self):
+        # params
+        for key, param in self.params.items():
+            if hasattr(param, '__iter__'):
+                self.model.add_param(key=key, values=list(param))
+            else:
+                self.model.add_param(key=key, values=[param])
+
+    def write_cards(self, subcase_id):
+        self.write_executive_control_cards()
+        self.write_case_control_cards()
+        self.write_params()
+
+        # Validate
+        self.model.validate()
+
+    def export_to_bdf(self, output_bdf):
+        # Write output
+        print('Writing bdf file...')
+        self.model.write_bdf(output_bdf, enddata=True)
+        print('Done!')
+
+
+class FlutterAnalysisModel(AnalysisModel):
+    SUBCASE_TYPES = {'PANELFLUTTER'}
+
+    def __init__(self):
+        super().__init__()
+        self.panels = []
+        self.superpanels = []
+        self.sol = 145
 
     def add_superpanel(self, superpanel):
         self.superpanels.append(superpanel)
 
-    def create_subcase(self, sub_id, config_file=None, data=None):
-        assert sub_id not in self.subcases.keys()
-        if config_file is None and data is None:
-            self.subcases[sub_id] = FlutterAnalysis()
-        elif config_file is None and data is not None:
-            if data['type'] == 'PANELFLUTTER':
-                self.subcases[sub_id] = PanelFlutterAnalysis.create_from_data(data)
-            else:
-                self.subcases[sub_id] = FlutterAnalysis.create_from_data(data)
-        elif config_file is not None and data is None:
-            self.subcases[sub_id] = FlutterAnalysis.create_from_yaml_file(config_file)
-        else:
-            raise Exception('You cannot specify a config file and a data at the same time.')
-
-    def write_cards_from_subcase(self, sub_id):
-        analysis = self.subcases[sub_id]
-        return self.write_cards_from_analysis(analysis)
-
-    def write_cards_from_analysis(self, analysis):
-        # defines FLFACT cards
-        densities_ratio = self.model.add_flfact(self.idutil.get_next_flfact_id(), analysis.densities_ratio)
-        machs = self.model.add_flfact(self.idutil.get_next_flfact_id(), analysis.machs)
-        velocities = self.model.add_flfact(self.idutil.get_next_flfact_id(), analysis.velocities)
-
-        # defines FLUTTER card for flutter analysis
-        fmethod = self.model.add_flutter(self.idutil.get_next_flutter_id(),
-                                         method=analysis.method,
-                                         density=densities_ratio.sid,
-                                         mach=machs.sid,
-                                         reduced_freq_velocity=velocities.sid)
-
-        # real eigenvalue method card
-        method = self.model.add_eigrl(sid=self.idutil.get_next_method_id(),
-                                      norm='MASS',
-                                      nd=analysis.n_modes,
-                                      v1=analysis.frequency_limits[0],
-                                      v2=analysis.frequency_limits[1])
-
-        # analysis.fmethod_sid = fmethod.sid
-        # analysis.method_sid = method.sid
-
-        # AERO card
-        self.model.add_aero(cref=analysis.ref_chord, rho_ref=analysis.ref_rho, velocity=1.0)
-
-        # MKAERO1 cards
-        self.model.add_mkaero1(analysis.machs, analysis.reduced_frequencies)
-
-        return fmethod.sid, method.sid
-
-    def write_superpanel_cards(self, superpanel, analysis):
+    def write_superpanel_cards(self, superpanel, subcase):
         # AEFACT cards
         thickness_integrals = self.model.add_aefact(self.idutil.get_next_aefact_id(),
                                                     superpanel.aeropanels[0].thickness_integrals)
 
         machs_n_alphas = self.model.add_aefact(self.idutil.get_next_aefact_id(),
-                                               [v for ma in zip(analysis.machs, analysis.alphas) for v in ma])
+                                               [v for ma in zip(subcase.machs, subcase.alphas) for v in ma])
 
         # PAERO5 cards
         paero = self.model.add_paero5(self.idutil.get_next_paero_id(),
@@ -157,7 +179,7 @@ class AeroelasticAnalysis:
             # if type(struct) == int:
             #     grid_group = model.sets[struct]
             # elif len(list(struct)) > 0:
-            #     grid_group = model.add_set1(idutil.get_next_set_id(), list(struct))  # TODO: use SET2
+            #     grid_group = model.add_set1(idutil.get_next_set_id(), list(struct))
             # else:
             #     raise Exception('Structural grid set for Splines could not be created.')
 
@@ -179,16 +201,64 @@ class AeroelasticAnalysis:
                                    dthy=-1.,
                                    dz=0.)
 
-    def write_cards(self, subcase_id):
-        print("Writing cards...")
+    def create_subcase_from_file(self, sub_id, subcase_file_name):
+        assert sub_id not in self.subcases.keys()
+        sub = FlutterSubcase.create_from_yaml(subcase_file_name)
+        self.subcases[sub_id] = sub
+        return sub
 
-        # Executive Control
-        self.model.sol = 145  # Aerodynamic Flutter
-        diagnostic = 'DIAG '
-        for diag in self.diags:
-            diagnostic += '%d,' % diag
-        self.model.executive_control_lines = [diagnostic]
+    def create_subcase_from_data(self, sub_id, data):
+        assert sub_id not in self.subcases.keys()
+        if data['type'] == 'PANELFLUTTER':
+            sub = PanelFlutterSubcase.create_from_data(data)
+        else:
+            sub = FlutterSubcase.create_from_data(data)
+        self.subcases[sub_id] = sub
+        return sub
 
+    def create_subcase(self, sub_id, sub_type):
+        assert sub_id not in self.subcases.keys()
+        if sub_type == 'PANELFLUTTER':
+            sub = PanelFlutterSubcase()
+        else:
+            sub = FlutterSubcase()
+        self.subcases[sub_id] = sub
+        return sub
+
+    def write_cards_from_subcase(self, sub_id):
+        subcase = self.subcases[sub_id]
+
+        # defines FLFACT cards
+        densities_ratio = self.model.add_flfact(self.idutil.get_next_flfact_id(), subcase.densities_ratio)
+        machs = self.model.add_flfact(self.idutil.get_next_flfact_id(), subcase.machs)
+        velocities = self.model.add_flfact(self.idutil.get_next_flfact_id(), subcase.velocities)
+
+        # defines FLUTTER card for flutter subcase
+        fmethod = self.model.add_flutter(self.idutil.get_next_flutter_id(),
+                                         method=subcase.method,
+                                         density=densities_ratio.sid,
+                                         mach=machs.sid,
+                                         reduced_freq_velocity=velocities.sid)
+
+        # real eigenvalue method card
+        method = self.model.add_eigrl(sid=self.idutil.get_next_method_id(),
+                                      norm='MASS',
+                                      nd=subcase.n_modes,
+                                      v1=subcase.frequency_limits[0],
+                                      v2=subcase.frequency_limits[1])
+
+        # subcase.fmethod_sid = fmethod.sid
+        # subcase.method_sid = method.sid
+
+        # AERO card
+        self.model.add_aero(cref=subcase.ref_chord, rho_ref=subcase.ref_rho, velocity=1.0)
+
+        # MKAERO1 cards
+        self.model.add_mkaero1(subcase.machs, subcase.reduced_frequencies)
+
+        return fmethod.sid, method.sid
+
+    def write_case_control_cards(self):
         # Case Control
         cc = CaseControlDeck([])
 
@@ -203,12 +273,8 @@ class AeroelasticAnalysis:
             cc.add_parameter_to_local_subcase(1, 'SPC = %d' % list(self.model.spcs.keys())[0])
         self.model.case_control_deck = cc
 
-        # params
-        for key, param in self.params.items():
-            if hasattr(param, '__iter__'):
-                self.model.add_param(key=key, values=list(param))
-            else:
-                self.model.add_param(key=key, values=[param])
+    def write_cards(self, subcase_id):
+        super().write_cards(subcase_id)
 
         for spanel in self.superpanels:
             self.write_superpanel_cards(spanel, self.subcases[subcase_id])
@@ -217,16 +283,9 @@ class AeroelasticAnalysis:
         self.model.validate()
 
         print('Aerodynamic Flutter solution created!')
-        # print(model.get_bdf_stats())
-
-    def export_to_bdf(self, output_bdf):
-        # Write output
-        print('Writing bdf file...')
-        self.model.write_bdf(output_bdf, enddata=True)
-        print('Done!')
 
 
-class FlutterAnalysis:
+class FlutterSubcase:
     """
     This class represents the requirements to the Aeroelastic Flutter Solution 145 of NASTRAN.
     """
@@ -254,7 +313,7 @@ class FlutterAnalysis:
 
     @classmethod
     def create_from_data(cls, data):
-        return FlutterAnalysis(
+        return FlutterSubcase(
             data['ref_rho'],
             data['ref_chord'],
             data['n_modes'],
@@ -268,13 +327,13 @@ class FlutterAnalysis:
         )
 
     @classmethod
-    def create_from_yaml_file(cls, file):
-        with open(file, 'r') as file:
+    def create_from_yaml(cls, file_name):
+        with open(file_name, 'r') as file:
             data = yaml.safe_load(file)
-        return FlutterAnalysis.create_from_data(data)
+        return FlutterSubcase.create_from_data(data)
 
 
-class PanelFlutterAnalysis(FlutterAnalysis):
+class PanelFlutterSubcase(FlutterSubcase):
 
     def __init__(self, *args, plate_stiffness=None, vref=None):
         super().__init__(*args)
@@ -283,18 +342,18 @@ class PanelFlutterAnalysis(FlutterAnalysis):
 
     @classmethod
     def create_from_data(cls, data):
-        return PanelFlutterAnalysis(data['ref_rho'],
-                                    data['ref_chord'],
-                                    data['n_modes'],
-                                    data['frequency_limits'],
-                                    data['densities_ratio'],
-                                    data['machs'],
-                                    data['alphas'],
-                                    data['reduced_frequencies'],
-                                    data['velocities'],
-                                    data['method'],
-                                    plate_stiffness=data['plate_stiffness'],
-                                    vref=data['vref'])
+        return PanelFlutterSubcase(data['ref_rho'],
+                                   data['ref_chord'],
+                                   data['n_modes'],
+                                   data['frequency_limits'],
+                                   data['densities_ratio'],
+                                   data['machs'],
+                                   data['alphas'],
+                                   data['reduced_frequencies'],
+                                   data['velocities'],
+                                   data['method'],
+                                   plate_stiffness=data['plate_stiffness'],
+                                   vref=data['vref'])
 
 
 def _get_last_id_from_ids(elements):
@@ -302,6 +361,9 @@ def _get_last_id_from_ids(elements):
 
 
 class IDUtility:
+    """
+        This class is a utility to work with IDs in the BDF format using pyNastran
+    """
 
     def __init__(self, model):
         self.model = model

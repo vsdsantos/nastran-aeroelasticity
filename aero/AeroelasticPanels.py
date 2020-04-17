@@ -1,5 +1,6 @@
 from femap.femap import Femap
 import numpy as np
+from abc import abstractmethod
 
 
 class Panel:
@@ -77,6 +78,7 @@ class AeroPanel(Panel):
     def set_panel_grid_ids(self, femap: Femap, text="Select the nodes for the Panel"):
         self.structural_ids = femap.get_node_ids_array(text)
 
+    @abstractmethod
     def set_panel_properties(self):
         pass
 
@@ -99,13 +101,13 @@ class AeroPanel5(AeroPanel):
         self.theory = 1
 
 
-class SuperAeroPanel(AeroPanel):
+class SuperAeroPanel(Panel):
     """
     A "superelement" which holds AeroPanel and its derivatives elements disposed chordwise.
     It's used to simulate chordwise flexibility with aerodynamic strip theories.
     """
 
-    def __init__(self, aeropanels=None):
+    def __init__(self, nchord=None, nspan=None, aeropanels=None):
         """
         Parameters
         ----------
@@ -113,15 +115,13 @@ class SuperAeroPanel(AeroPanel):
             aeropanels : {int: AeroPanel}
         """
         super().__init__()
+        self.nchord = nchord
+        self.nspan = nspan
         self.aeropanels = aeropanels
 
-    def set_panel_grid_group(self, femap, text=''):
-        """ Do not use this with "Super Elements"."""
-        pass
-
-    def set_panel_grid_ids(self, femap, text=''):
-        """ Do not use this with "Super Elements"."""
-        pass
+    def set_mesh_size(self, femap: Femap):
+        self.nspan = int(femap.user_int_input('Number of elements span wise:'))
+        self.nchord = int(femap.user_int_input('Number of elements chord wise:'))
 
     def set_panels_grid_group(self):
         for k in self.aeropanels.keys():
