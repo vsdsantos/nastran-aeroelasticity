@@ -72,16 +72,19 @@ class AnalysisModel(ABC):
         #     diagnostic += '%d,' % diag
         # self.model.executive_control_lines = [diagnostic]
 
+    def write_case_control_from_list(self, cc, idn, subcase):
+        for card in subcase.case_control:
+            cc.add_parameter_to_local_subcase(idn, card)
+
     def write_case_control_cards(self):
         # Case Control
         cc = CaseControlDeck([])
 
-        for key in self.subcases.keys():
+        for key, subcase in self.subcases.items():
             cc.create_new_subcase(key)
-            cc.add_parameter_to_local_subcase(1, 'ECHO = BOTH')  # TODO: make object property and file configurable
-            cc.add_parameter_to_local_subcase(1, 'DISP = ALL')
+            self.write_case_control_from_list(cc, key, subcase)
             # BC ID TODO: let user select the SPC
-            cc.add_parameter_to_local_subcase(1, 'SPC = %d' % list(self.model.spcs.keys())[0])
+            cc.add_parameter_to_local_subcase(key, 'SPC = %d' % list(self.model.spcs.keys())[0])
         self.model.case_control_deck = cc
 
     def write_params(self):
@@ -262,15 +265,12 @@ class FlutterAnalysisModel(AnalysisModel):
         # Case Control
         cc = CaseControlDeck([])
 
-        for key in self.subcases.keys():
+        for key, subcase in self.subcases.items():
             fmethod, method = self.write_cards_from_subcase(key)
             cc.create_new_subcase(key)
-            cc.add_parameter_to_local_subcase(1, 'ECHO = BOTH')
-            cc.add_parameter_to_local_subcase(1, 'DISP = ALL')
+            self.write_case_control_from_list(cc, key, subcase)
             cc.add_parameter_to_local_subcase(1, 'FMETHOD = %d' % fmethod)
             cc.add_parameter_to_local_subcase(1, 'METHOD = %d' % method)
-            # BC ID TODO: let user select the SPC
-            cc.add_parameter_to_local_subcase(1, 'SPC = %d' % list(self.model.spcs.keys())[0])
         self.model.case_control_deck = cc
 
     def write_cards(self, subcase_id):
@@ -285,7 +285,24 @@ class FlutterAnalysisModel(AnalysisModel):
         print('Aerodynamic Flutter solution created!')
 
 
-class FlutterSubcase:
+def _set_object_properties(obj, data):
+    for key, val in data.items():
+        setattr(obj, key, val)
+
+
+class Subcase:
+
+    def __init__(self, case_control=None):
+        self.case_control = case_control
+
+    @classmethod
+    def create_from_data(cls, data):
+        obj = cls()
+        _set_object_properties(obj, data)
+        return obj
+
+
+class FlutterSubcase(Subcase):
     """
     This class represents the requirements to the Aeroelastic Flutter Solution 145 of NASTRAN.
     """
@@ -297,9 +314,10 @@ class FlutterSubcase:
         4: 'KE',
     }
 
-    def __init__(self, ref_rho=None, ref_chord=None, n_modes=None,
+    def __init__(self, *args, ref_rho=None, ref_chord=None, n_modes=None,
                  frequency_limits=None, densities_ratio=None, machs=None, alphas=None,
                  reduced_frequencies=None, velocities=None, method=None):
+        super().__init__(*args)
         self.ref_rho = ref_rho
         self.ref_chord = ref_chord
         self.n_modes = n_modes
@@ -310,21 +328,6 @@ class FlutterSubcase:
         self.reduced_frequencies = reduced_frequencies
         self.velocities = velocities
         self.method = method
-
-    @classmethod
-    def create_from_data(cls, data):
-        return FlutterSubcase(
-            data['ref_rho'],
-            data['ref_chord'],
-            data['n_modes'],
-            data['frequency_limits'],
-            data['densities_ratio'],
-            data['machs'],
-            data['alphas'],
-            data['reduced_frequencies'],
-            data['velocities'],
-            data['method']
-        )
 
     @classmethod
     def create_from_yaml(cls, file_name):
@@ -340,20 +343,6 @@ class PanelFlutterSubcase(FlutterSubcase):
         self.plate_stiffness = plate_stiffness
         self.vref = vref
 
-    @classmethod
-    def create_from_data(cls, data):
-        return PanelFlutterSubcase(data['ref_rho'],
-                                   data['ref_chord'],
-                                   data['n_modes'],
-                                   data['frequency_limits'],
-                                   data['densities_ratio'],
-                                   data['machs'],
-                                   data['alphas'],
-                                   data['reduced_frequencies'],
-                                   data['velocities'],
-                                   data['method'],
-                                   plate_stiffness=data['plate_stiffness'],
-                                   vref=data['vref'])
 
 
 def _get_last_id_from_ids(elements):

@@ -18,7 +18,7 @@ if __name__ == '__main__':
     femap = Femap()
     femap.export_bdf_model(input_file)
     analysis.import_from_bdf(input_file)
-    analysis.load_analysis_from_yaml(os.path.join(base_path, r'subcase.yml'))
+    analysis.load_analysis_from_yaml(os.path.join(base_path, r'analysis.yml'))
     spanel = SuperAeroPanel5()
     spanel.init_from_femap(femap)
 

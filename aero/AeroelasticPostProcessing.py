@@ -1,6 +1,6 @@
 from typing import Union
 
-from aero.AeroelasticAnalysis import FlutterAnalysis, PanelFlutterAnalysis
+from aero.AeroelasticAnalysis import FlutterSubcase, PanelFlutterSubcase
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -27,7 +27,7 @@ FLUTTER_DATA_KEYS = {
 }
 
 
-def read_f06(filename, analysis: Union[FlutterAnalysis, PanelFlutterAnalysis]):
+def read_f06(filename, analysis: Union[FlutterSubcase, PanelFlutterSubcase]):
     with open(filename, 'r') as file:
         content = file.readlines()
 
@@ -71,7 +71,7 @@ def read_f06(filename, analysis: Union[FlutterAnalysis, PanelFlutterAnalysis]):
             idx = np.where(data['DAMPING'] > 0)[0][0] + 1
             critic_vel = np.interp(0, data['DAMPING'][:idx], data['VELOCITY'][:idx])
             critic_freq = np.interp(critic_vel, data['VELOCITY'][:idx], data['FREQUENCY'][:idx])
-            if type(analysis) is PanelFlutterAnalysis:
+            if type(analysis) is PanelFlutterSubcase:
                 D = analysis.plate_stiffness
                 vref = analysis.vref
                 a = analysis.ref_chord
@@ -130,7 +130,7 @@ def filter_modes(modes, mach, dr):
     return filter(lambda m: m['MACH NUMBER'] == mach and m['DENSITY RATIO'] == dr, modes)
 
 
-def plot_flutter_data(modes, analysis: FlutterAnalysis):
+def plot_flutter_data(modes, analysis: FlutterSubcase):
     for mach in analysis.machs:
         for dens_ratio in analysis.densities_ratio:
             modes = list(filter_modes(modes, mach, dens_ratio))
