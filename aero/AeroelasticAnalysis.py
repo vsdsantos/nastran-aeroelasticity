@@ -13,29 +13,31 @@ class AnalysisModel(ABC):
         self.diags = []
         self.sol = None
 
-    def import_from_bdf(self, bdf_file_name: str):
+    def import_from_bdf(self, bdf_file_name: str, sanitize: bool = True):
         # load models and utility
-        base_model = BDF()
+        base_model = BDF(debug=False)
 
         print("Loading base bdf model to pyNastran...")
         base_model.read_bdf(bdf_file_name)
 
         # clears problematic entries from previous analysis
-        print("Sanitizing model...")
-        cards = list(base_model.card_count.keys())
-        # TODO: make whitelist of structural elements, properties and spcs or resolve the importing other way
-        black_list = ['ENDDATA', 'PARAM', 'EIGR', 'CAERO1', 'CAERO2', 'PAERO1', 'PAERO2', 'SPLINE1', 'SPLINE2', 'EIGRL']
-        sanit_card_keys = list(filter(lambda c: c not in black_list, cards))
-        sanit_cards = base_model.get_cards_by_card_types(sanit_card_keys)
+        if sanitize:
+            print("Sanitizing model...")
+            cards = list(base_model.card_count.keys())
+            # TODO: make whitelist of structural elements, properties and spcs or resolve the importing other way
+            black_list = ['ENDDATA', 'PARAM', 'EIGR', 'CAERO1', 'CAERO2', 'PAERO1', 'PAERO2', 'SPLINE1', 'SPLINE2', 'EIGRL']
+            sanit_card_keys = list(filter(lambda c: c not in black_list, cards))
+            sanit_cards = base_model.get_cards_by_card_types(sanit_card_keys)
 
-        for key in sanit_cards:
-            for card in sanit_cards[key]:
-                lines = card.write_card().split('\n')
-                comments = []
-                while lines[0].strip('')[0] == '$':  # separate comments
-                    comments.append(lines.pop(0))
-                self.model.add_card_lines(lines, key, comment=comments)
-
+            for key in sanit_cards:
+                for card in sanit_cards[key]:
+                    lines = card.write_card().split('\n')
+                    comments = []
+                    while lines[0].strip('')[0] == '$':  # separate comments
+                        comments.append(lines.pop(0))
+                    self.model.add_card_lines(lines, key, comment=comments)
+        else:
+            self.model = base_model
         print('Done!')
 
     def load_analysis_from_yaml(self, yaml_file_name: str):
