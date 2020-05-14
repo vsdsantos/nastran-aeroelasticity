@@ -1,3 +1,4 @@
+interface: femap
 diags:
   - 18  # print the set2 grid points
 params:

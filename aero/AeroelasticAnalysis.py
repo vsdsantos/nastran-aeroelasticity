@@ -3,6 +3,66 @@ from abc import ABC, abstractmethod
 import yaml
 
 
+class Subcase:
+
+    def __init__(self, case_control=None):
+        self.case_control = case_control
+
+    @classmethod
+    def create_from_data(cls, data):
+        obj = cls()
+        _set_object_properties(obj, data)
+        return obj
+
+
+class FlutterSubcase(Subcase):
+    """
+    This class represents the requirements to the Aeroelastic Flutter Solution 145 of NASTRAN.
+    """
+
+    FMETHODS = {
+        1: 'K',
+        2: 'PK',
+        3: 'PKNL',
+        4: 'KE',
+    }
+
+    def __init__(self, *args, ref_rho=None, ref_chord=None, n_modes=None,
+                 frequency_limits=None, densities_ratio=None, machs=None, alphas=None,
+                 reduced_frequencies=None, velocities=None, method=None):
+        super().__init__(*args)
+        self.ref_rho = ref_rho
+        self.ref_chord = ref_chord
+        self.n_modes = n_modes
+        self.frequency_limits = frequency_limits
+        self.densities_ratio = densities_ratio
+        self.machs = machs
+        self.alphas = alphas
+        self.reduced_frequencies = reduced_frequencies
+        self.velocities = velocities
+        self.method = method
+
+    @classmethod
+    def create_from_yaml(cls, file_name):
+        with open(file_name, 'r') as file:
+            data = yaml.safe_load(file)
+        return FlutterSubcase.create_from_data(data)
+
+
+class PanelFlutterSubcase(FlutterSubcase):
+
+    def __init__(self, *args, plate_stiffness=None, vref=None):
+        super().__init__(*args)
+        self.plate_stiffness = plate_stiffness
+        self.vref = vref
+
+
+SUBCASE_TYPES = {
+        'PANELFLUTTER': PanelFlutterSubcase,
+        'DEFAULT': FlutterSubcase
+        }
+
+
 class AnalysisModel(ABC):
 
     def __init__(self):
@@ -12,6 +72,7 @@ class AnalysisModel(ABC):
         self.params = {}
         self.diags = []
         self.sol = None
+        self.interface = None
 
     def import_from_bdf(self, bdf_file_name: str, sanitize: bool = True):
         # load models and utility
@@ -85,19 +146,17 @@ class AnalysisModel(ABC):
         for key, subcase in self.subcases.items():
             cc.create_new_subcase(key)
             self.write_case_control_from_list(cc, key, subcase)
-            # BC ID TODO: let user select the SPC
-            cc.add_parameter_to_local_subcase(key, 'SPC = %d' % list(self.model.spcs.keys())[0])
         self.model.case_control_deck = cc
 
     def write_params(self):
         # params
         for key, param in self.params.items():
-            if hasattr(param, '__iter__'):
+            if hasattr(param, '__iter__'): # check if object is iterable
                 self.model.add_param(key=key, values=list(param))
             else:
                 self.model.add_param(key=key, values=[param])
 
-    def write_cards(self, subcase_id):
+    def write_cards(self):
         self.write_executive_control_cards()
         self.write_case_control_cards()
         self.write_params()
@@ -113,7 +172,6 @@ class AnalysisModel(ABC):
 
 
 class FlutterAnalysisModel(AnalysisModel):
-    SUBCASE_TYPES = {'PANELFLUTTER'}
 
     def __init__(self):
         super().__init__()
@@ -214,19 +272,21 @@ class FlutterAnalysisModel(AnalysisModel):
 
     def create_subcase_from_data(self, sub_id, data):
         assert sub_id not in self.subcases.keys()
-        if data['type'] == 'PANELFLUTTER':
-            sub = PanelFlutterSubcase.create_from_data(data)
-        else:
-            sub = FlutterSubcase.create_from_data(data)
+        # if data['type'] == 'PANELFLUTTER':
+        #     sub = PanelFlutterSubcase.create_from_data(data)
+        # else:
+        #     sub = FlutterSubcase.create_from_data(data)
+        sub = SUBCASE_TYPES[data['type']].create_from_data(data)
         self.subcases[sub_id] = sub
         return sub
 
     def create_subcase(self, sub_id, sub_type):
         assert sub_id not in self.subcases.keys()
-        if sub_type == 'PANELFLUTTER':
-            sub = PanelFlutterSubcase()
-        else:
-            sub = FlutterSubcase()
+        # if sub_type == 'PANELFLUTTER':
+        #     sub = PanelFlutterSubcase()
+        # else:
+        #     sub = FlutterSubcase()
+        sub = SUBCASE_TYPES[sub_type].create_from_data()
         self.subcases[sub_id] = sub
         return sub
 
@@ -275,11 +335,12 @@ class FlutterAnalysisModel(AnalysisModel):
             cc.add_parameter_to_local_subcase(1, 'METHOD = %d' % method)
         self.model.case_control_deck = cc
 
-    def write_cards(self, subcase_id):
-        super().write_cards(subcase_id)
+    def write_cards(self):
+        super().write_cards()
 
-        for spanel in self.superpanels:
-            self.write_superpanel_cards(spanel, self.subcases[subcase_id])
+        for subcase in self.subcases:
+            for spanel in self.superpanels:
+                self.write_superpanel_cards(spanel, subcase)
 
         # Validate
         self.model.validate()
@@ -290,61 +351,6 @@ class FlutterAnalysisModel(AnalysisModel):
 def _set_object_properties(obj, data):
     for key, val in data.items():
         setattr(obj, key, val)
-
-
-class Subcase:
-
-    def __init__(self, case_control=None):
-        self.case_control = case_control
-
-    @classmethod
-    def create_from_data(cls, data):
-        obj = cls()
-        _set_object_properties(obj, data)
-        return obj
-
-
-class FlutterSubcase(Subcase):
-    """
-    This class represents the requirements to the Aeroelastic Flutter Solution 145 of NASTRAN.
-    """
-
-    FMETHODS = {
-        1: 'K',
-        2: 'PK',
-        3: 'PKNL',
-        4: 'KE',
-    }
-
-    def __init__(self, *args, ref_rho=None, ref_chord=None, n_modes=None,
-                 frequency_limits=None, densities_ratio=None, machs=None, alphas=None,
-                 reduced_frequencies=None, velocities=None, method=None):
-        super().__init__(*args)
-        self.ref_rho = ref_rho
-        self.ref_chord = ref_chord
-        self.n_modes = n_modes
-        self.frequency_limits = frequency_limits
-        self.densities_ratio = densities_ratio
-        self.machs = machs
-        self.alphas = alphas
-        self.reduced_frequencies = reduced_frequencies
-        self.velocities = velocities
-        self.method = method
-
-    @classmethod
-    def create_from_yaml(cls, file_name):
-        with open(file_name, 'r') as file:
-            data = yaml.safe_load(file)
-        return FlutterSubcase.create_from_data(data)
-
-
-class PanelFlutterSubcase(FlutterSubcase):
-
-    def __init__(self, *args, plate_stiffness=None, vref=None):
-        super().__init__(*args)
-        self.plate_stiffness = plate_stiffness
-        self.vref = vref
-
 
 
 def _get_last_id_from_ids(elements):
