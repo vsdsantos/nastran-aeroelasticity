@@ -2,8 +2,13 @@ from pyNastran.bdf.bdf import BDF, CaseControlDeck
 from abc import ABC, abstractmethod
 import yaml
 
+from aero.AeroelasticPanels import SuperAeroPanel5, SuperAeroPanel1
+
 
 class Subcase:
+    """
+    Represents a NASTRAN subcase with CASE CONTROL statements.
+    """
 
     def __init__(self, case_control=None):
         self.case_control = case_control
@@ -22,9 +27,11 @@ class FlutterSubcase(Subcase):
 
     FMETHODS = {
         1: 'K',
-        2: 'PK',
-        3: 'PKNL',
-        4: 'KE',
+        2: 'KE',
+        3: 'PK',
+        4: 'PKNL',
+        5: 'PKS',  # only on recent MSC.Nastran versions
+        6: 'PKNLS'  # only on recent MSC.Nastran versions
     }
 
     def __init__(self, *args, ref_rho=None, ref_chord=None, n_modes=None,
@@ -58,9 +65,9 @@ class PanelFlutterSubcase(FlutterSubcase):
 
 
 SUBCASE_TYPES = {
-        'PANELFLUTTER': PanelFlutterSubcase,
-        'DEFAULT': FlutterSubcase
-        }
+    'PANELFLUTTER': PanelFlutterSubcase,
+    'FLUTTER': FlutterSubcase
+}
 
 
 class AnalysisModel(ABC):
@@ -86,7 +93,8 @@ class AnalysisModel(ABC):
             print("Sanitizing model...")
             cards = list(base_model.card_count.keys())
             # TODO: make whitelist of structural elements, properties and spcs or resolve the importing other way
-            black_list = ['ENDDATA', 'PARAM', 'EIGR', 'CAERO1', 'CAERO2', 'PAERO1', 'PAERO2', 'SPLINE1', 'SPLINE2', 'EIGRL']
+            black_list = ['ENDDATA', 'PARAM', 'EIGR', 'CAERO1', 'CAERO2', 'PAERO1', 'PAERO2', 'SPLINE1', 'SPLINE2',
+                          'EIGRL']
             sanit_card_keys = list(filter(lambda c: c not in black_list, cards))
             sanit_cards = base_model.get_cards_by_card_types(sanit_card_keys)
 
@@ -106,6 +114,7 @@ class AnalysisModel(ABC):
             data = yaml.safe_load(file)
         self.params = data['params']
         self.diags = data['diags']
+        self.interface = data['interface']
         for key, subcase in data['subcases'].items():
             self.create_subcase_from_data(key, data=subcase)
 
@@ -151,7 +160,7 @@ class AnalysisModel(ABC):
     def write_params(self):
         # params
         for key, param in self.params.items():
-            if hasattr(param, '__iter__'): # check if object is iterable
+            if hasattr(param, '__iter__'):  # check if object is iterable
                 self.model.add_param(key=key, values=list(param))
             else:
                 self.model.add_param(key=key, values=[param])
@@ -172,97 +181,21 @@ class AnalysisModel(ABC):
 
 
 class FlutterAnalysisModel(AnalysisModel):
+    """
+    Class for the Nastran's SOL 145
+
+    It can be used for conventional wing or aircraft flutter.
+    """
 
     def __init__(self):
         super().__init__()
         self.panels = []
-        self.superpanels = []
         self.sol = 145
 
-    def add_superpanel(self, superpanel):
-        self.superpanels.append(superpanel)
-
-    def write_superpanel_cards(self, superpanel, subcase):
-        # AEFACT cards
-        thickness_integrals = self.model.add_aefact(self.idutil.get_next_aefact_id(),
-                                                    superpanel.aeropanels[0].thickness_integrals)
-
-        machs_n_alphas = self.model.add_aefact(self.idutil.get_next_aefact_id(),
-                                               [v for ma in zip(subcase.machs, subcase.alphas) for v in ma])
-
-        # PAERO5 cards
-        paero = self.model.add_paero5(self.idutil.get_next_paero_id(),
-                                      caoci=superpanel.aeropanels[0].control_surface_ratios,
-                                      nalpha=1,
-                                      lalpha=machs_n_alphas.sid)
-
-        # CORD2R and CAERO5 cards
-        # wind_x_vector = np.array([1., 0., 0.])
-        caeros = []
-        cords = []
-        id_increment = self.idutil.get_last_element_id()
-        for i, panel in superpanel.aeropanels.items():
-            # set origin to element mid chord (linear spline requires the Y axis to be colinear with the
-            # "elastic axis" of the structure, since it is a plate chord-wise divided,
-            # the elastic axis should be at mid chord)
-            origin = panel.p1 + panel.d12 / 2
-
-            # point in the XZ plane to define the coordinate system
-            # this hardcodes the Y axis of the local aerodynamic coordinate system
-            # to be colinear with the element Y axis (i.e. the vector of p1 to p4)
-            pxz_i = origin + panel.d12
-
-            # local aerodynamic coordinate system
-            cords.append(
-                self.model.add_cord2r(self.idutil.get_next_coord_id(),
-                                      origin,
-                                      origin + panel.orthogonal_vector,
-                                      pxz_i))
-
-            # CAERO5 element
-            caeros.append(
-                self.model.add_caero5(self.idutil.get_next_caero_id() + id_increment,
-                                      pid=paero.pid,
-                                      cp=0,
-                                      nspan=panel.nspan,
-                                      lspan=None,
-                                      nthick=thickness_integrals.sid,
-                                      p1=panel.p1,
-                                      x12=panel.l12,
-                                      p4=panel.p4,
-                                      x43=panel.l43,
-                                      ntheory=panel.theory)
-            )
-            id_increment = panel.nspan - 1
-
-        # SET and SPLINE cards
-        for i, elem in enumerate(caeros):
-            # grid set (nodes) to the spline interpolation
-            # struct = spanel.aeropanels[i].structural_ids
-            # if type(struct) == int:
-            #     grid_group = model.sets[struct]
-            # elif len(list(struct)) > 0:
-            #     grid_group = model.add_set1(idutil.get_next_set_id(), list(struct))
-            # else:
-            #     raise Exception('Structural grid set for Splines could not be created.')
-
-            grid_group = self.model.add_set2(self.idutil.get_next_set_id(), elem.eid, -0.01, 1.01, -0.01, 1.01)
-
-            # Linear Spline (SPLINE2) element
-            self.model.add_spline2(self.idutil.get_next_spline_id(),
-                                   caero=elem.eid,
-                                   # Coordinate system of the CAERO5 element
-                                   # (Y-Axis must be colinear with "Elastic Axis")
-                                   cid=cords[i].cid,
-                                   id1=elem.eid,
-                                   id2=elem.eid + superpanel.nspan - 1,
-                                   setg=grid_group.sid,
-                                   # Detached bending and torsion (-1 -> infinity flexibility), only Z displacement
-                                   # allowed to comply with the rigid chord necessity of the Piston Theory
-                                   # and still model the plate bending (with N chord-wise elements).
-                                   dthx=-1.,
-                                   dthy=-1.,
-                                   dz=0.)
+    def write_machs_and_alphas(self, subcase):
+        # TODO: Vary with the used flutter solution method
+        return self.model.add_aefact(self.idutil.get_next_aefact_id(),
+                                     [v for ma in zip(subcase.machs, subcase.alphas) for v in ma])
 
     def create_subcase_from_file(self, sub_id, subcase_file_name):
         assert sub_id not in self.subcases.keys()
@@ -331,16 +264,124 @@ class FlutterAnalysisModel(AnalysisModel):
             fmethod, method = self.write_cards_from_subcase(key)
             cc.create_new_subcase(key)
             self.write_case_control_from_list(cc, key, subcase)
-            cc.add_parameter_to_local_subcase(1, 'FMETHOD = %d' % fmethod)
-            cc.add_parameter_to_local_subcase(1, 'METHOD = %d' % method)
+            cc.add_parameter_to_local_subcase(1, 'FMETHOD = %d' % fmethod)  # the flutter card id
+            cc.add_parameter_to_local_subcase(1, 'METHOD = %d' % method)  # the eigenval analysis card id
         self.model.case_control_deck = cc
+
+
+class PanelFlutterAnalysisModel(FlutterAnalysisModel):
+    """
+    Class to model a panel flutter configuration in Nastran.
+    """
+    def __init__(self):
+        super().__init__()
+        self.superpanels = []
+
+    def add_superpanel(self, superpanel):
+        self.superpanels.append(superpanel)
+
+    def write_superpanel1_cards(self, superpanel, subcase):
+        pass
+
+    def write_superpanel5_cards(self, superpanel, subcase):
+        # AEFACT cards
+        thickness_integrals = self.model.add_aefact(self.idutil.get_next_aefact_id(),
+                                                    superpanel.aeropanels[0].thickness_integrals)
+
+        machs_n_alphas = self.write_machs_and_alphas(subcase)
+
+        # PAERO5 card
+        paero = self.model.add_paero5(self.idutil.get_next_paero_id(),
+                                      caoci=superpanel.aeropanels[0].control_surface_ratios,
+                                      nalpha=1,
+                                      lalpha=machs_n_alphas.sid)
+
+        caeros, cords = self.write_caero5_as_panel(superpanel, paero, thickness_integrals)
+        self.write_splines2_for_panel(superpanel, caeros, cords)
+
+    def write_caero5_as_panel(self, superpanel, paero, thickness_integrals):
+        # CORD2R and CAERO5 cards
+        # wind_x_vector = np.array([1., 0., 0.])
+        caeros = []
+        cords = []
+        id_increment = self.idutil.get_last_element_id()
+        for i, panel in superpanel.aeropanels.items():
+            # set origin to element mid chord (linear spline requires the Y axis to be colinear with the
+            # "elastic axis" of the structure, since it is a plate chord-wise divided,
+            # the elastic axis should be at mid chord)
+            origin = panel.p1 + panel.d12 / 2
+
+            # point in the XZ plane to define the coordinate system
+            # this hardcodes the Y axis of the local aerodynamic coordinate system
+            # to be colinear with the element Y axis (i.e. the vector of p1 to p4)
+            pxz_i = origin + panel.d12
+
+            # local aerodynamic coordinate system
+            cords.append(
+                self.model.add_cord2r(self.idutil.get_next_coord_id(),
+                                      origin,
+                                      origin + panel.orthogonal_vector,
+                                      pxz_i))
+
+            # CAERO5 element
+            caeros.append(
+                self.model.add_caero5(self.idutil.get_next_caero_id() + id_increment,
+                                      pid=paero.pid,
+                                      cp=0,
+                                      nspan=panel.nspan,
+                                      lspan=None,
+                                      nthick=thickness_integrals.sid,
+                                      p1=panel.p1,
+                                      x12=panel.l12,
+                                      p4=panel.p4,
+                                      x43=panel.l43,
+                                      ntheory=panel.theory)
+            )
+            id_increment = panel.nspan - 1
+        return caeros, cords
+
+    def write_splines2_for_panel(self, superpanel, caeros, cords):
+        # SET and SPLINE cards
+        for i, elem in enumerate(caeros):
+            # TODO: Make optional use of set2 or set1
+            # grid set (nodes) to the spline interpolation
+            # struct = spanel.aeropanels[i].structural_ids
+            # if type(struct) == int:
+            #     grid_group = model.sets[struct]
+            # elif len(list(struct)) > 0:
+            #     grid_group = model.add_set1(idutil.get_next_set_id(), list(struct))
+            # else:
+            #     raise Exception('Structural grid set for Splines could not be created.')
+
+            grid_group = self.model.add_set2(self.idutil.get_next_set_id(), elem.eid, -0.01, 1.01, -0.01, 1.01)
+
+            # Linear Spline (SPLINE2) element
+            self.model.add_spline2(self.idutil.get_next_spline_id(),
+                                   caero=elem.eid,
+                                   # Coordinate system of the CAERO5 element
+                                   # (Y-Axis must be colinear with "Elastic Axis")
+                                   cid=cords[i].cid,
+                                   id1=elem.eid,
+                                   id2=elem.eid + superpanel.nspan - 1,
+                                   setg=grid_group.sid,
+                                   # Detached bending and torsion (-1 -> infinity flexibility), only Z displacement
+                                   # allowed to comply with the rigid chord necessity of the Piston Theory
+                                   # and still model the plate bending (with N chord-wise elements).
+                                   dthx=-1.,
+                                   dthy=-1.,
+                                   dz=0.)
 
     def write_cards(self):
         super().write_cards()
 
         for subcase in self.subcases:
             for spanel in self.superpanels:
-                self.write_superpanel_cards(spanel, subcase)
+                if type(spanel) == SuperAeroPanel1:
+                    self.write_superpanel1_cards(spanel, subcase)
+                elif type(spanel) == SuperAeroPanel5:
+                    self.write_superpanel5_cards(spanel, subcase)
+                else:
+                    pass
 
         # Validate
         self.model.validate()

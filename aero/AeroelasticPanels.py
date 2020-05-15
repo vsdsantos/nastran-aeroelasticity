@@ -95,6 +95,15 @@ class AeroPanel(Panel):
         pass
 
 
+class AeroPanel1(AeroPanel):
+    """
+
+    """
+
+    def __init__(self):
+        super().__init__()
+
+
 class AeroPanel5(AeroPanel):
     """
     Aerodynamic Panel using the Piston Theory (CEARO5 Nastran's element).
@@ -153,13 +162,67 @@ class SuperAeroPanel(Panel):
                 setattr(panel, prop, getattr(self.aeropanels[0], prop))
 
 
-class SuperAeroPanel5(SuperAeroPanel):
-    """
-    A superelement which holds CEARO5 elements.
+class SuperAeroPanel1(SuperAeroPanel):
     """
 
-    def __init__(self, ide, superpanels=None):
-        super().__init__(ide, superpanels)
+    """
+
+    def __init__(self, ide, min_mach=None):
+        super().__init__(ide)
+        self.min_mach = min_mach
+
+    def create_aero1_panels(self):
+        main_panel = AeroPanel1()
+        left_panel = AeroPanel1()
+        right_panel = AeroPanel1()
+
+        main_panel.p1 = self.p1
+        main_panel.p2 = self.p2
+        main_panel.p3 = self.p3
+        main_panel.p4 = self.p4
+        main_panel.set_mesh_size(self.nspan, self.nchord)
+
+        # angle of the mach cone
+        mi = np.arccos(1./self.min_mach)  # mi = arccos(1/M)
+        lateral_span = self.chord / np.tan(mi)  # the spanwise needed
+
+        element_size = self.d14 / self.nspan  # element spanwise length
+        lateral_n = np.ceil(element_size / lateral_span)  # number of span elements
+
+        left_panel.p1 = self.p1 - [0, element_size*lateral_n, 0]
+        left_panel.p2 = self.p2 - [0, element_size*lateral_n, 0]
+        left_panel.p3 = self.p2
+        left_panel.p4 = self.p1
+        left_panel.set_mesh_size(lateral_n, self.nchord)
+
+        right_panel.p1 = self.p1
+        right_panel.p2 = self.p2
+        right_panel.p3 = self.p2 + [0, element_size * lateral_n, 0]
+        right_panel.p4 = self.p1 + [0, element_size * lateral_n, 0]
+        right_panel.set_mesh_size(lateral_n, self.nchord)
+
+        self.aeropanels[1] = main_panel
+        self.aeropanels[2] = left_panel
+        self.aeropanels[3] = right_panel
+
+    def init_from_femap(self, femap):
+        # get aerodynamic grid limits
+        self.set_panel_limits_from_femap(femap)
+
+        # aerodynamic mesh definition
+        self.set_mesh_size_from_femap(femap)
+
+        # generate the AeroPanel objects
+        self.create_aero1_panels()
+
+
+class SuperAeroPanel5(SuperAeroPanel):
+    """
+    A superelement which holds CEARO5 elements (strips) for modeling chordwise flexiblity.
+    """
+
+    def __init__(self, ide, aeropanels=None):
+        super().__init__(ide, aeropanels)
 
     def create_aero5_panels(self):
         self.aeropanels = {i: AeroPanel5() for i in range(self.nchord)}
@@ -172,7 +235,6 @@ class SuperAeroPanel5(SuperAeroPanel):
             panel.p3 = panel.p4 + self.d43 / self.nchord
 
     def init_from_femap(self, femap):
-
         # get aerodynamic grid limits
         self.set_panel_limits_from_femap(femap)
 
