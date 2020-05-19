@@ -2,6 +2,8 @@ from pyNastran.bdf.bdf import BDF, CaseControlDeck
 from abc import ABC, abstractmethod
 import yaml
 
+import numpy as np
+
 from aero.AeroelasticPanels import SuperAeroPanel5, SuperAeroPanel1
 
 
@@ -81,32 +83,37 @@ class AnalysisModel(ABC):
         self.sol = None
         self.interface = None
 
-    def import_from_bdf(self, bdf_file_name: str, sanitize: bool = True):
+    def import_from_bdf(self, bdf_file_name: str, sanitize: bool = True, reset_bdf: bool = False):
         # load models and utility
         base_model = BDF(debug=False)
+
+        if reset_bdf:
+            self.model = BDF(debug=False)
+            self.idutil = IDUtility(self.model)
 
         print("Loading base bdf model to pyNastran...")
         base_model.read_bdf(bdf_file_name)
 
         # clears problematic entries from previous analysis
+        # print("Sanitizing model...")
+        cards = list(base_model.card_count.keys())
+        # TODO: make whitelist of structural elements, properties and spcs or resolve the importing other way
+
         if sanitize:
-            print("Sanitizing model...")
-            cards = list(base_model.card_count.keys())
-            # TODO: make whitelist of structural elements, properties and spcs or resolve the importing other way
             black_list = ['ENDDATA', 'PARAM', 'EIGR', 'CAERO1', 'CAERO2', 'PAERO1', 'PAERO2', 'SPLINE1', 'SPLINE2',
                           'EIGRL']
-            sanit_card_keys = list(filter(lambda c: c not in black_list, cards))
-            sanit_cards = base_model.get_cards_by_card_types(sanit_card_keys)
-
-            for key in sanit_cards:
-                for card in sanit_cards[key]:
-                    lines = card.write_card().split('\n')
-                    comments = []
-                    while lines[0].strip('')[0] == '$':  # separate comments
-                        comments.append(lines.pop(0))
-                    self.model.add_card_lines(lines, key, comment=comments)
         else:
-            self.model = base_model
+            black_list = []
+        sanit_card_keys = list(filter(lambda c: c not in black_list, cards))
+        sanit_cards = base_model.get_cards_by_card_types(sanit_card_keys)
+
+        for key in sanit_cards:
+            for card in sanit_cards[key]:
+                lines = card.write_card().split('\n')
+                comments = []
+                while lines[0].strip('')[0] == '$':  # separate comments
+                    comments.append(lines.pop(0))
+                self.model.add_card_lines(lines, key, comment=comments)
         print('Done!')
 
     def load_analysis_from_yaml(self, yaml_file_name: str):
@@ -192,10 +199,10 @@ class FlutterAnalysisModel(AnalysisModel):
         self.panels = []
         self.sol = 145
 
-    def write_machs_and_alphas(self, subcase):
+    def write_machs_and_alphas(self, machs, alphas):
         # TODO: Vary with the used flutter solution method
         return self.model.add_aefact(self.idutil.get_next_aefact_id(),
-                                     [v for ma in zip(subcase.machs, subcase.alphas) for v in ma])
+                                     [v for ma in zip(machs, alphas) for v in ma])
 
     def create_subcase_from_file(self, sub_id, subcase_file_name):
         assert sub_id not in self.subcases.keys()
@@ -273,6 +280,7 @@ class PanelFlutterAnalysisModel(FlutterAnalysisModel):
     """
     Class to model a panel flutter configuration in Nastran.
     """
+
     def __init__(self):
         super().__init__()
         self.superpanels = []
@@ -281,14 +289,63 @@ class PanelFlutterAnalysisModel(FlutterAnalysisModel):
         self.superpanels.append(superpanel)
 
     def write_superpanel1_cards(self, superpanel, subcase):
-        pass
+        paero = self.model.add_paero1(self.idutil.get_next_paero_id())
+
+        elements = {}
+
+        last_id = self.idutil.get_last_element_id()
+
+        pot = int(np.ceil(np.log10(last_id))) + 1
+
+        # TODO: improve eid handle
+        main = superpanel.aeropanels['main']
+        left = superpanel.aeropanels['left']
+        right = superpanel.aeropanels['right']
+
+        elements['main'] = self.model.add_caero1(int(10 ** pot + 1),
+                                                 pid=paero.pid,
+                                                 nspan=main.nspan,
+                                                 nchord=main.nchord,
+                                                 igroup=1,
+                                                 p1=main.p1,
+                                                 p4=main.p4,
+                                                 x12=main.l12,
+                                                 x43=main.l43)
+
+        elements['left'] = self.model.add_caero1(self.idutil.get_next_caero_id() + main.nspan * main.nchord,
+                                                 pid=paero.pid,
+                                                 nspan=left.nspan,
+                                                 nchord=left.nchord,
+                                                 igroup=1,
+                                                 p1=left.p1,
+                                                 p4=left.p4,
+                                                 x12=left.l12,
+                                                 x43=left.l43)
+
+        elements['right'] = self.model.add_caero1(self.idutil.get_next_caero_id() + left.nspan * left.nchord,
+                                                  pid=paero.pid,
+                                                  nspan=right.nspan,
+                                                  nchord=right.nchord,
+                                                  igroup=1,
+                                                  p1=right.p1,
+                                                  p4=right.p4,
+                                                  x12=right.l12,
+                                                  x43=right.l43)
+
+        grid_group = self.model.add_set2(self.idutil.get_next_set_id(), elements['main'].eid, -0.01, 1.01, -0.01, 1.01)
+
+        self.model.add_spline1(self.idutil.get_next_spline_id(),
+                               caero=elements['main'].eid,
+                               box1=elements['main'].eid,
+                               box2=elements['main'].eid + elements['main'].nspan * elements['main'].nchord - 1,
+                               setg=grid_group.sid)
 
     def write_superpanel5_cards(self, superpanel, subcase):
         # AEFACT cards
         thickness_integrals = self.model.add_aefact(self.idutil.get_next_aefact_id(),
                                                     superpanel.aeropanels[0].thickness_integrals)
 
-        machs_n_alphas = self.write_machs_and_alphas(subcase)
+        machs_n_alphas = self.write_machs_and_alphas(self.subcases[subcase].machs, self.subcases[subcase].alphas)
 
         # PAERO5 card
         paero = self.model.add_paero5(self.idutil.get_next_paero_id(),

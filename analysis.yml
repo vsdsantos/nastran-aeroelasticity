@@ -2,91 +2,69 @@ interface: femap
 diags:
   - 18  # print the set2 grid points
 params:
-  VREF: 1000.0  # from mm/s to m/s  # from in/s to ft/s
-#  WTMASS: 0.0025907  # 1/g -> entries are in "weight density"
-#  GRDPNT: 1
+  VREF: 1000.0  # velocity unity transform  -> V := V/Vref (from mm/s to m/s in the case)
+#  WTMASS: 1.  # 1/g -> if entries are in "weight density"
+#  GRDPNT: 1 # IDK
   COUPMASS: 1  # Coupled Mass Matrix --> more precision
-#  OPPHIPA: 1
+#  OPPHIPA: 1 # IDK
   POST: -1  # output op2 file
-#  UNITSYS: 'N-MM-C'  # misc units information
+  UNITSYS: 'N-MM-C'  # misc units information
   LMODES: 15 # limit the number of modes used on flutter subcase
 subcases:
   1:
-    type: 'PANELFLUTTER'
-    case_control:
+    type: 'PANELFLUTTER' # chose between PANELFLUTTER for panel flutter configurations and DEFAULT for usual flutter analysis
+    case_control: # case control
        - 'ECHO=BOTH'
        - 'DISP=ALL'
        - 'SPC=1'
-    plate_stiffness: 37113.4
-    vref: 1000.
-    ref_rho: 1.225E-12  # 1.1468e-7
-    ref_chord: 300. # 10.
-    n_modes: 15
-    method: 'PKS'
-    frequency_limits:
+    plate_stiffness: 37113.4  # used to calculate the non-dimensional dynamic pressure (N mm in the case)
+    vref: 1000. # used to calculate the non-dimensional dynamic pressure must be the same in control case (mm/s in the case)
+    ref_rho: 1.225E-12  # air density reference (ton/mm^3 in the case)
+    ref_chord: 300. # reference chord (mm in the case)
+    n_modes: 15 # number searched modes in modal analysis
+    frequency_limits: # the range of frequency (Hz) in modal analysis
       - 0.0
       - 1000.0
-    densities_ratio:
+    method: 'PKS' # the method for solving flutter (it will determine the next parameters
+    densities_ratio: # rho/rho_ref -> 1/2 simulates the "one side flow" of the panel
       - .5
-    machs:
+    machs: # Mach numbers
       - 2.0
 #      - 3.0
 #      - 4.0
 #      - 5.0
-    alphas:
+    alphas: # AoA (°) -> 0 is more conservative
       - 0.0
 #      - 0.0
 #      - 0.0
 #      - 0.0
-    reduced_frequencies:
+    reduced_frequencies: # reduced frequencies (k)
       - .001
       - .1
       - .2
       - .4
-    velocities:
+    velocities: # velocities (mm/s in the case)
       - 330000.
-      - 357250.0935
-      - 384500.187
-      - 411750.2805
-      - 439000.374
-      - 466250.4675
-      - 493500.5611
-      - 520750.6546
-      - 548000.7481
-      - 575250.8416
-      - 602500.9351
-      - 629751.0286
-      - 657001.1221
-      - 684251.2156
-      - 711501.3091
-      - 738751.4026
-      - 766001.4961
-      - 793251.5896
-      - 820501.6832
-      - 847751.7767
-      - 875001.8702
-      - -902251.9637
+      - 357250.
+      - 384500.
+      - 411750.
+      - 439000.
+      - 466250.
+      - 493500.
+      - 520750.
+      - 548000.
+      - 575250.
+      - 602500.
+      - 629751.
+      - 657001.
+      - 684251.
+      - 711501.
+      - 738751.
+      - 766001.
+      - 793251.
+      - 820501.
+      - 847751.
+      - 875001.
+      - 902251.
       - 950000.
       - 1000000.
-
-#      - 822000.
-#      - 834195.
-#      - 846390.
-#      - 858585.
-#      - 870780.
-#      - 882975.
-#      - 895170.
-#      - 907365.
-#      - 919560.
-#      - 931755.
-#      - 943950.
-#      - 956145.
-#      - 968340.
-#      - 980535.
-#      - 992730.
-#      - 1004925.
-#      - 1017120.
-#      - 1029315.
-#      - 1041510.
-#      - 1053705.
-#      - 1065900.
