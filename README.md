@@ -65,3 +65,22 @@ analysis.export_to_bdf(output_file)
 ```
 
 Then you can run the analysis and post-processes.
+
+## Outputs
+
+Some console informartion
+
+```
+SUBCASE 1
+Flutter found on MODE 3
+	MACH 	2.0
+	VELOCITY 	770.3449586829851
+	LAMBDA 	305.3366755075875
+
+```
+
+And Plots
+
+![V-f](https://i.imgur.com/4yHdjqo.png)
+
+![V-g](https://i.imgur.com/fnTF7IR.png)
