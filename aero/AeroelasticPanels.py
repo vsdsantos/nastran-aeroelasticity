@@ -5,17 +5,23 @@ from abc import abstractmethod
 
 class Panel:
     """
-    Generic Panel defined by four points in the space.
+    Generic Panel defined by four points in the space and a n x m mesh.
     """
-    def __init__(self, p1=None, p2=None, p3=None, p4=None):
+    def __init__(self, p1=None, p2=None, p3=None, p4=None, nchord=None, nspan=None):
         self.p1 = p1
         self.p2 = p2
         self.p3 = p3
         self.p4 = p4
+        self.nchord = nchord
+        self.nspan = nspan
 
     @property
     def d12(self):
         return self.p2 - self.p1
+
+    @property
+    def d23(self):
+        return self.p3 - self.p2
 
     @property
     def d43(self):
@@ -24,10 +30,6 @@ class Panel:
     @property
     def d14(self):
         return self.p4 - self.p1
-
-    @property
-    def d23(self):
-        return self.p3 - self.p2
 
     @property
     def orthogonal_vector(self):
@@ -49,11 +51,31 @@ class Panel:
     def l43(self):
         return np.linalg.norm(self.d43)
 
-    def set_panel_limits(self, femap: Femap):
-        self.p1 = np.array(list(femap.get_xyz('Please select the Aerodynamic Panel Point 1:')))
-        self.p2 = np.array(list(femap.get_xyz('Please select the Aerodynamic Panel Point 2:')))
-        self.p3 = np.array(list(femap.get_xyz('Please select the Aerodynamic Panel Point 3:')))
-        self.p4 = np.array(list(femap.get_xyz('Please select the Aerodynamic Panel Point 4:')))
+    @property
+    def l14(self):
+        return np.linalg.norm(self.d14)
+
+    def set_panel_limits(self, p1, p2, p3, p4):
+        self.p1 = p1
+        self.p2 = p2
+        self.p3 = p3
+        self.p4 = p4
+
+    def set_panel_limits_from_femap(self, femap: Femap):
+        p1 = np.array(list(femap.get_xyz('Please select the Aerodynamic Panel Point 1:')))
+        p2 = np.array(list(femap.get_xyz('Please select the Aerodynamic Panel Point 2:')))
+        p3 = np.array(list(femap.get_xyz('Please select the Aerodynamic Panel Point 3:')))
+        p4 = np.array(list(femap.get_xyz('Please select the Aerodynamic Panel Point 4:')))
+        self.set_panel_limits(p1, p2, p3, p4)
+
+    def set_mesh_size(self, nspan, nchord):
+        self.nspan = nspan
+        self.nchord = nchord
+
+    def set_mesh_size_from_femap(self, femap: Femap):
+        nspan = int(femap.user_int_input('Number of elements span wise:'))
+        nchord = int(femap.user_int_input('Number of elements chord wise:'))
+        self.set_mesh_size(nspan, nchord)
 
 
 class AeroPanel(Panel):
@@ -64,29 +86,34 @@ class AeroPanel(Panel):
 
     def __init__(self, nchord=None, nspan=None, structural_ids=None):
         super().__init__()
-        self.nchord = nchord
-        self.nspan = nspan
         self.structural_ids = structural_ids
 
-    def set_mesh_size(self, femap: Femap):
-        self.nspan = int(femap.user_int_input('Number of elements span wise:'))
-        self.nchord = int(femap.user_int_input('Number of elements chord wise:'))
-
-    def set_panel_grid_group(self, femap: Femap, text="Select the node group for the Panel"):
+    def set_panel_grid_group_from_femap(self, femap: Femap, text="Select the node group for the Panel"):
         self.structural_ids = int(femap.get_group_id(text))
 
-    def set_panel_grid_ids(self, femap: Femap, text="Select the nodes for the Panel"):
+    def set_panel_grid_ids_from_femap(self, femap: Femap, text="Select the nodes for the Panel"):
         self.structural_ids = femap.get_node_ids_array(text)
 
     @abstractmethod
-    def set_panel_properties(self):
+    def set_panel_properties(self, *args):
         pass
+
+
+class AeroPanel1(AeroPanel):
+    """
+
+    """
+
+    def __init__(self):
+        super().__init__()
 
 
 class AeroPanel5(AeroPanel):
     """
     Aerodynamic Panel using the Piston Theory (CEARO5 Nastran's element).
     """
+
+    THEORIES = {'PISTON': 0, 'VANDYKE': 1, 'VDSWEEP': 2}
 
     def __init__(self, thickness_integrals=None, control_surface_ratios=None, theory=None):
         super().__init__()
@@ -95,10 +122,11 @@ class AeroPanel5(AeroPanel):
         self.theory = theory
         self.nchord = 1
 
-    def set_panel_properties(self):
-        self.thickness_integrals = [0., 0., 0., 0., 0., 0.]  # TODO: calculate on time
-        self.control_surface_ratios = [0. for _ in range(self.nspan)]  # for each strip TODO: make this customizable
-        self.theory = 1
+    def set_panel_properties(self, theory, thickness_int, control_surf):
+        assert len(control_surf) == self.nspan
+        self.thickness_integrals = thickness_int
+        self.control_surface_ratios = control_surf
+        self.theory = self.THEORIES[theory]
 
 
 class SuperAeroPanel(Panel):
@@ -107,7 +135,7 @@ class SuperAeroPanel(Panel):
     It's used to simulate chordwise flexibility with aerodynamic strip theories.
     """
 
-    def __init__(self, nchord=None, nspan=None, aeropanels=None):
+    def __init__(self, eid, aeropanels=None):
         """
         Parameters
         ----------
@@ -115,24 +143,19 @@ class SuperAeroPanel(Panel):
             aeropanels : {int: AeroPanel}
         """
         super().__init__()
-        self.nchord = nchord
-        self.nspan = nspan
+        self.eid = eid
         self.aeropanels = aeropanels
 
-    def set_mesh_size(self, femap: Femap):
-        self.nspan = int(femap.user_int_input('Number of elements span wise:'))
-        self.nchord = int(femap.user_int_input('Number of elements chord wise:'))
-
-    def set_panels_grid_group(self):
+    def set_panels_grid_group_from_femap(self):
         for k in self.aeropanels.keys():
             self.aeropanels[k].set_panel_grid_group("Select the node group for the Panel {}".format(k+1))
 
-    def set_panels_grid_ids(self):
+    def set_panels_grid_ids_from_femap(self):
         for i, k in enumerate(self.aeropanels.keys()):
             self.aeropanels[k].set_panel_grid_ids("Select the nodes id for the Panel {}".format(k+1))
 
-    def set_panel_properties_equally(self):
-        self.aeropanels[0].set_panel_properties()
+    def set_panel_properties_equally(self, *args):
+        self.aeropanels[0].set_panel_properties(*args)
         ignored_props = vars(AeroPanel(None))
         for k, panel in self.aeropanels.items():
             if k == 0:
@@ -143,13 +166,73 @@ class SuperAeroPanel(Panel):
                 setattr(panel, prop, getattr(self.aeropanels[0], prop))
 
 
-class SuperAeroPanel5(SuperAeroPanel):
-    """
-    A superelement which holds CEARO5 elements.
+class SuperAeroPanel1(SuperAeroPanel):
     """
 
-    def __init__(self):
-        super().__init__()
+    """
+
+    def __init__(self, ide, min_mach=np.sqrt(2)):
+        super().__init__(ide)
+        self.min_mach = min_mach
+
+    def create_aero1_panels(self):
+        self.aeropanels = {}
+
+        main_panel = AeroPanel1()
+        left_panel = AeroPanel1()
+        right_panel = AeroPanel1()
+
+        main_panel.p1 = self.p1
+        main_panel.p2 = self.p2
+        main_panel.p3 = self.p3
+        main_panel.p4 = self.p4
+        main_panel.set_mesh_size(self.nspan, self.nchord)
+
+        # angle of the mach cone
+        mi = np.arccos(1./self.min_mach)  # mi = arccos(1/M)
+        lateral_span = self.chord / np.tan(mi)  # the spanwise needed
+
+        element_size = self.l14 / self.nspan  # element spanwise length
+        lateral_n = int(np.ceil(lateral_span / element_size))  # number of span elements
+
+        left_panel.p1 = self.p1 - [0, element_size*lateral_n, 0]
+        left_panel.p2 = self.p2 - [0, element_size*lateral_n, 0]
+        left_panel.p3 = self.p2
+        left_panel.p4 = self.p1
+        left_panel.set_mesh_size(lateral_n, self.nchord)
+
+        right_panel.p1 = self.p4
+        right_panel.p2 = self.p3
+        right_panel.p3 = self.p3 + [0, element_size * lateral_n, 0]
+        right_panel.p4 = self.p4 + [0, element_size * lateral_n, 0]
+        right_panel.set_mesh_size(lateral_n, self.nchord)
+
+        self.aeropanels['main'] = main_panel
+        self.aeropanels['left'] = left_panel
+        self.aeropanels['right'] = right_panel
+
+    def init(self):
+        # generate the AeroPanel objects
+        self.create_aero1_panels()
+
+    def init_from_femap(self, femap):
+        # get aerodynamic grid limits
+        self.set_panel_limits_from_femap(femap)
+
+        # aerodynamic mesh definition
+        self.set_mesh_size_from_femap(femap)
+
+        self.init()
+
+
+
+class SuperAeroPanel5(SuperAeroPanel):
+    """
+    A superelement which holds CEARO5 elements (strips) for modeling chordwise flexiblity.
+    """
+
+    def __init__(self, eid, aeropanels=None):
+        super().__init__(eid, aeropanels)
 
     def create_aero5_panels(self):
         self.aeropanels = {i: AeroPanel5() for i in range(self.nchord)}
@@ -161,17 +244,21 @@ class SuperAeroPanel5(SuperAeroPanel):
             panel.p2 = panel.p1 + self.d12 / self.nchord
             panel.p3 = panel.p4 + self.d43 / self.nchord
 
-    def init_from_femap(self, femap):
-
-        # get aerodynamic grid limits
-        self.set_panel_limits(femap)
-
-        # aerodynamic mesh definition
-        self.set_mesh_size(femap)
-
+    def init(self):
         # generate the AeroPanel objects
         self.create_aero5_panels()
 
         # panel properties
-        self.set_panel_properties_equally()
+        theory = 'VANDYKE'
+        thickness_int = [0., 0., 0., 0., 0., 0.]  # TODO: calculate on time
+        control_surf = [0. for _ in range(self.nspan)]  # for each strip TODO: make this customizable
+        self.set_panel_properties_equally(theory, thickness_int, control_surf)
 
+    def init_from_femap(self, femap):
+        # get aerodynamic grid limits
+        self.set_panel_limits_from_femap(femap)
+
+        # aerodynamic mesh definition
+        self.set_mesh_size_from_femap(femap)
+
+        self.init()
