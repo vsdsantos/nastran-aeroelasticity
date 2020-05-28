@@ -102,24 +102,24 @@ def filter_modes_by_list(modes, mode_list):
 
 def plot_figure(modes, x_key, y_key, labels, title, xlabel='x', ylabel='y', marker='.-'):
     figsize = (9, 5)
-    fig = plt.figure(figsize=figsize)
-    fig.suptitle(title)
+    fig = plt.figure(figsize=figsize, constrained_layout=True)
     ax = fig.gca()
     for mode, label in zip(list(modes), labels):
         ax.plot(mode[x_key], mode[y_key], marker, label=label)
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
+    ax.set_title(title, fontsize=16)
     ax.grid()
     ax.legend(bbox_to_anchor=(1.2, 1), fancybox=True, shadow=True)
     plt.show()
 
 
 def plot_vg(modes, labels, title):
-    plot_figure(modes, 'VELOCITY', 'DAMPING', labels, title, 'Velocidade (m/s)', 'Amortecimento')
+    plot_figure(modes, 'VELOCITY', 'DAMPING', labels, title, 'Velocity (m/s)', 'Damping')
 
 
 def plot_vf(modes, labels, title):
-    plot_figure(modes, 'VELOCITY', 'FREQUENCY', labels, title, 'Velocidade (m/s)', 'Frequência (Hz)')
+    plot_figure(modes, 'VELOCITY', 'FREQUENCY', labels, title, 'Velocity (m/s)', 'Frequency (Hz)')
 
 
 def plot_complex(modes, labels, title):
@@ -136,10 +136,10 @@ def plot_flutter_data(modes, analysis: FlutterSubcase):
             modes = list(filter_modes(modes, mach, dens_ratio))
             labels = ['Mode {}'.format(mode['MODE']) for mode in modes]
 
-            plot_vg(modes, labels, 'V-g, Mach {}, Density Ratio {}, AoA {}°'.format(mach, dens_ratio, 0))
-            plot_vf(modes, labels, 'V-f, Mach {}, Density Ratio {}, AoA {}°'.format(mach, dens_ratio, 0))
-            # plot_complex(modes, labels,
-            #              'Autovalores Complexos, Mach {}, Density Ratio {}, AoA {}°'.format(mach, dens_ratio, 0))
+            plot_vg(modes, labels, 'V-g, Mach {}, AoA {}°'.format(mach, 0))
+            plot_vf(modes, labels, 'V-f, Mach {}, AoA {}°'.format(mach, 0))
+            plot_complex(modes, labels,
+                         'Complex Eigenvalues, Mach {}, AoA {}°'.format(mach, 0))
     plt.show()
 
 
@@ -189,3 +189,21 @@ def export_flutter_data(modes, critical_modes, flutter_data, analysis, filename)
 
     workbook.close()
 
+
+def panel_flutter_analysis(analysis, output_file):
+    for key, subcase in analysis.subcases.items():
+        print('SUBCASE {}'.format(key))
+        modes, critical_modes, flutter = read_f06(output_file.replace('.bdf', '.f06'), subcase)
+        searched_modes = list(filter(lambda m: m['MODE'] <= subcase.n_modes-10, modes))
+        plot_flutter_data(searched_modes, subcase)
+        searched_crit_modes = list(filter(lambda m: m['MODE'] <= subcase.n_modes, critical_modes))
+        if len(searched_crit_modes) > 0:
+            # plot_critical_flutter_data(searched_crit_modes)
+            for flut in flutter:
+                print('Flutter found on MODE {}'.format(flut['MODE']))
+                print('\tMACH \t{}'.format(flut['MACH']))
+                print('\tVELOCITY \t{}'.format(flut['VELOCITY']))
+                print('\tLAMBDA \t{}'.format(flut['LAMBDA']))
+        else:
+            print('No flutter encountered in subcase {}.'.format(key))
+        # export_flutter_data(modes, critical_modes, flutter, subcase[1], os.path.join(base_path, 'output-model.xlsx'))

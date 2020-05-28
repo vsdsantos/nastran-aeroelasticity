@@ -331,9 +331,11 @@ class PanelFlutterAnalysisModel(FlutterAnalysisModel):
                                                   p4=right.p4,
                                                   x12=right.l12,
                                                   x43=right.l43)
+        # self.write_spline1_for_panel(elements)
+        self.write_splines2_for_panel(superpanel, elements['main'])
 
+    def write_spline1_for_panel(self, elements):
         grid_group = self.model.add_set2(self.idutil.get_next_set_id(), elements['main'].eid, -0.01, 1.01, -0.01, 1.01)
-
         self.model.add_spline1(self.idutil.get_next_spline_id(),
                                caero=elements['main'].eid,
                                box1=elements['main'].eid,
@@ -397,9 +399,9 @@ class PanelFlutterAnalysisModel(FlutterAnalysisModel):
             id_increment = panel.nspan - 1
         return caeros, cords
 
-    def write_splines2_for_panel(self, superpanel, caeros, cords):
+    def write_splines2_for_panel(self, superpanel, caeros, cords=None):
         # SET and SPLINE cards
-        for i, elem in enumerate(caeros):
+        for i in range(superpanel.nchord):
             # TODO: Make optional use of set2 or set1
             # grid set (nodes) to the spline interpolation
             # struct = spanel.aeropanels[i].structural_ids
@@ -410,16 +412,16 @@ class PanelFlutterAnalysisModel(FlutterAnalysisModel):
             # else:
             #     raise Exception('Structural grid set for Splines could not be created.')
 
-            grid_group = self.model.add_set2(self.idutil.get_next_set_id(), elem.eid, -0.01, 1.01, -0.01, 1.01)
+            grid_group = self.model.add_set2(self.idutil.get_next_set_id(), caeros[i].eid, -0.01, 1.01, -0.01, 1.01)
 
             # Linear Spline (SPLINE2) element
             self.model.add_spline2(self.idutil.get_next_spline_id(),
-                                   caero=elem.eid,
+                                   caero=caeros[i].eid,
                                    # Coordinate system of the CAERO5 element
                                    # (Y-Axis must be colinear with "Elastic Axis")
-                                   cid=cords[i].cid,
-                                   id1=elem.eid,
-                                   id2=elem.eid + superpanel.nspan - 1,
+                                   cid=0 if cords else cords[i].cid,
+                                   id1=caeros[i].eid,
+                                   id2=caeros[i].eid + superpanel.nspan - 1,
                                    setg=grid_group.sid,
                                    # Detached bending and torsion (-1 -> infinity flexibility), only Z displacement
                                    # allowed to comply with the rigid chord necessity of the Piston Theory

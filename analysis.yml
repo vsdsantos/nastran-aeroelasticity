@@ -25,7 +25,7 @@ subcases:
     frequency_limits: # the range of frequency (Hz) in modal analysis
       - 0.0
       - 1000.0
-    method: 'PKS' # the method for solving flutter (it will determine the next parameters
+    method: 'PK' # the method for solving flutter (it will determine the next parameters
     densities_ratio: # rho/rho_ref -> 1/2 simulates the "one side flow" of the panel
       - .5
     machs: # Mach numbers
@@ -62,7 +62,7 @@ subcases:
       - 738751.
       - 766001.
       - 793251.
-      - 820501.
+      - -820501.
       - 847751.
       - 875001.
       - 902251.
