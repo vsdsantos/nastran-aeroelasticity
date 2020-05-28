@@ -1,4 +1,5 @@
-# py-nastran-aero-flutter
+[![DeepSource](https://static.deepsource.io/deepsource-badge-light-mini.svg)](https://deepsource.io/gh/zuckberj/nastran-aero-flutter/?ref=repository-badge)
+# nastran-aero-flutter
 
 This project is intended to analyse the Supersonic Panel Flutter using the NASTRAN software.
 
