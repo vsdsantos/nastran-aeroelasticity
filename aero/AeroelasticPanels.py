@@ -244,12 +244,11 @@ class SuperAeroPanel5(SuperAeroPanel):
             panel.p2 = panel.p1 + self.d12 / self.nchord
             panel.p3 = panel.p4 + self.d43 / self.nchord
 
-    def init(self):
+    def init(self, theory='VANDYKE'):
         # generate the AeroPanel objects
         self.create_aero5_panels()
 
         # panel properties
-        theory = 'VANDYKE'
         thickness_int = [0., 0., 0., 0., 0., 0.]  # TODO: calculate on time
         control_surf = [0. for _ in range(self.nspan)]  # for each strip TODO: make this customizable
         self.set_panel_properties_equally(theory, thickness_int, control_surf)

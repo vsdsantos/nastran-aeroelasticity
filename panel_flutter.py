@@ -7,7 +7,7 @@ from pyNastran.utils.nastran_utils import run_nastran
 
 from aero.AeroelasticAnalysis import PanelFlutterAnalysisModel
 from aero.AeroelasticPanels import SuperAeroPanel5, SuperAeroPanel1
-from aero.AeroelasticPostProcessing import panel_flutter_analysis
+from aero.AeroelasticPostProcessing import panel_flutter_analysis, read_f06
 from femap.femap import Femap
 
 
@@ -76,4 +76,5 @@ nastran_exe = r'C:\FEMAPv112\nastran\bin\nastran.exe'
 run_nastran(output_file, nastran_cmd=nastran_exe, keywords=['old=no'])
 
 #%%
-panel_flutter_analysis(analysis, output_file)
+# panel_flutter_analysis(analysis, output_file)
+read_f06(r"analysis-bdf\pflutter-gfrp-m-1-theta-0-nplies-4.f06", analysis)

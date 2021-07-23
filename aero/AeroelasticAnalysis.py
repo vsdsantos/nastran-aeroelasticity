@@ -100,11 +100,11 @@ class AnalysisModel(ABC):
         # TODO: make whitelist of structural elements, properties and spcs or resolve the importing other way
 
         if sanitize:
-            black_list = ['ENDDATA', 'PARAM', 'EIGR', 'CAERO1', 'CAERO2', 'PAERO1', 'PAERO2', 'SPLINE1', 'SPLINE2',
+            block_list = ['ENDDATA', 'PARAM', 'EIGR', 'CAERO1', 'CAERO2', 'PAERO1', 'PAERO2', 'SPLINE1', 'SPLINE2',
                           'EIGRL']
         else:
-            black_list = []
-        sanit_card_keys = list(filter(lambda c: c not in black_list, cards))
+            block_list = []
+        sanit_card_keys = list(filter(lambda c: c not in block_list, cards))
         sanit_cards = base_model.get_cards_by_card_types(sanit_card_keys)
 
         for key in sanit_cards:
@@ -152,8 +152,9 @@ class AnalysisModel(ABC):
         # self.model.executive_control_lines = [diagnostic]
 
     def write_case_control_from_list(self, cc, idn, subcase):
-        for card in subcase.case_control:
-            cc.add_parameter_to_local_subcase(idn, card)
+        if subcase.case_control is not None:
+            for card in subcase.case_control:
+                cc.add_parameter_to_local_subcase(idn, card)
 
     def write_case_control_cards(self):
         # Case Control
@@ -344,6 +345,7 @@ class PanelFlutterAnalysisModel(FlutterAnalysisModel):
 
     def write_superpanel5_cards(self, superpanel, subcase):
         # AEFACT cards
+        
         thickness_integrals = self.model.add_aefact(self.idutil.get_next_aefact_id(),
                                                     superpanel.aeropanels[0].thickness_integrals)
 
@@ -432,7 +434,7 @@ class PanelFlutterAnalysisModel(FlutterAnalysisModel):
 
     def write_cards(self):
         super().write_cards()
-
+        
         for subcase in self.subcases:
             for spanel in self.superpanels:
                 if type(spanel) == SuperAeroPanel1:

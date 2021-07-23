@@ -3,6 +3,7 @@ from typing import Union
 from aero.AeroelasticAnalysis import FlutterSubcase, PanelFlutterSubcase
 
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 
 import xlsxwriter
@@ -19,6 +20,8 @@ FLUTTER_INFO_KEYS = {
 }
 
 FLUTTER_DATA_KEYS = {
+    'KFREQ': 'Frequency',
+    '1./KFREQ': 'Inverse Frequency',
     'VELOCITY': 'Velocity',
     'DAMPING': 'Damping',
     'FREQUENCY': 'Frequency',
@@ -26,47 +29,140 @@ FLUTTER_DATA_KEYS = {
     'IMAGEIGVAL': 'Imag Eigenvalue',
 }
 
+p_header = re.compile(r"(?P<label>.+(?=SUBCASE))(?P<subcase>SUBCASE\s\d+)")
+
+def parse_summary_header(header):
+    assert len(header) == 3
+    
+    line1, line2, line3 = header[0], header[1], header[2]
+    
+    res = p_header.search(line1[1:])
+    label = res.group('label').strip()
+    subcase = res.group('subcase').replace('SUBCASE', '').strip()
+    
+    info = dict()
+    
+    info['SUBCASE'] = int(subcase)
+    info['LABEL'] = label
+    
+    raw = line2 + ' ' + line3
+    for key in FLUTTER_INFO_KEYS:
+        p = re.compile(r'\b{} =\s*\S*'.format(key))
+        value = p.search(raw).group(0).replace('{} ='.format(key), '').strip()
+        try:
+            info[key] = float(value)
+        except ValueError:
+            info[key] = value
+    
+    return info
+
+
+def parse_content(content):
+    data = []
+    for line in content:
+        data.append(list(map(lambda entry: float(entry), line.split())))
+        # for i, k in enumerate(FLUTTER_DATA_KEYS):
+            # data.append(np.array(list(map(lambda args: args, raw_data))))
+        
+    return data
+
+    # data['KFREQ'] = np.array(list(map(lambda args: args[0], raw_data)))
+    # data['inv_KFREQ'] = np.array(list(map(lambda args: args[1], raw_data)))
+    # data['VELOCITY'] = np.absolute(np.array(list(map(lambda args: args[2], raw_data))))  # makes velocities positive
+    # data['DAMPING'] = np.array(list(map(lambda args: args[3], raw_data)))
+    # data['FREQUENCY'] = np.array(list(map(lambda args: args[4], raw_data)))
+    # data['REALEIGVAL'] = np.array(list(map(lambda args: args[5], raw_data)))
+    # data['IMAGEIGVAL'] = np.array(list(map(lambda args: args[6], raw_data)))
+
+    # data['MODE'] = ((int(data['POINT']) - 1) % (len(flutter_summaries)//len(analysis.machs))) + 1
+
+SKIP_LINE_SET = {"*** USER INFORMATION MESSAGE"}
+
+def check_skip_lines(line):
+    return any([ (k in line) for k in SKIP_LINE_SET])
+
+def parse_to_df(parsed_data, info, last_df):
+    df = pd.DataFrame(parsed_data, 
+                              columns=list(FLUTTER_DATA_KEYS.keys()))
+    if type(last_df) is not type(None):
+        last_index = last_df.index.droplevel('INDEX').unique().to_list()[0]
+        is_continuation = last_index == (info['SUBCASE'],
+                                        info['MACH NUMBER'],
+                                        info['POINT'])
+    else:
+        is_continuation = False
+    
+    if is_continuation:
+        last_idx_number = last_df.iloc[-1].name[-1]
+        count = range(last_idx_number+1,last_idx_number+1+len(df))
+    else:
+        count = range(len(df))
+        
+    header = [
+        [info['SUBCASE']],
+        [info['MACH NUMBER']],
+        [info['POINT']],
+        # [info['DENSITY RATIO']],
+        count
+        ]
+    
+    index = pd.MultiIndex.from_product(header,
+               names=['SUBCASE', 'MACH NUMBER', 'POINT', 'INDEX'])
+    # names=['SUBCASE', 'POINT', 'MACH NUMBER', 'DENSITY RATIO', 'INDEX'])
+    
+    df.index = index
+    return df
 
 def read_f06(filename, analysis: Union[FlutterSubcase, PanelFlutterSubcase]):
     with open(filename, 'r') as file:
-        content = file.readlines()
+        raw_lines = file.readlines()
 
-    flutter_summaries = []
-    for i, line in enumerate(content):
+    data = []
+    
+    for i, line in enumerate(raw_lines):
         if 'FLUTTER  SUMMARY' in line:
-            flutter_summaries.append(content[i + 1:i + 6 + len(analysis.velocities)])
+            raw_header = [raw_lines[i-1]] + raw_lines[i+1:i+3]
+            info = parse_summary_header(raw_header)
+            
+            raw_content = []
+            j = i+6 # linha após as labels de dados
+            while raw_lines[j][0] != '1': # primeiro char na linha final da pagina é 1
+                l = raw_lines[j]
+                if check_skip_lines(l):
+                    break
+                raw_content.append(l)
+                j += 1
 
+            parsed_data = parse_content(raw_content)
+            
+            df = parse_to_df(parsed_data, info,
+                             data[-1] if len(data)>0 else None)
+            
+            data.append(df)
+            
+            # flutter_summaries.append(content[i + 1 : i + 6 + len(analysis.velocities)])
+        
+    return pd.concat(data)
+    # return process_data(flutter_summaries)
+
+
+def process_df(df):
+    pass
+
+def process_data(flutter_summaries):
+    
     modes = []
     flutter_conditions = []
     critical_modes = []
+    
     for summary in flutter_summaries:
         raw_data = []
         data = {}
 
         # pop information from the 2 first lines
-        raw = summary.pop(0) + ' ' + summary.pop(0)
-        for key in FLUTTER_INFO_KEYS:
-            rgxp = re.compile(r'\b{} =\s*\S*'.format(key))
-            value = rgxp.search(raw).group(0).replace('{} ='.format(key), '').strip()
-            try:
-                data[key] = float(value)
-            except ValueError:
-                data[key] = value
 
         # ignore 2 blank lines and data header, split data, and parse
-        for line in summary[3:]:
-            raw_data.append(list(map(lambda entry: float(entry), line.split())))
-
-        data['KFREQ'] = np.array(list(map(lambda args: args[0], raw_data)))
-        data['inv_KFREQ'] = np.array(list(map(lambda args: args[1], raw_data)))
-        data['VELOCITY'] = np.absolute(np.array(list(map(lambda args: args[2], raw_data))))  # makes velocities positive
-        data['DAMPING'] = np.array(list(map(lambda args: args[3], raw_data)))
-        data['FREQUENCY'] = np.array(list(map(lambda args: args[4], raw_data)))
-        data['REALEIGVAL'] = np.array(list(map(lambda args: args[5], raw_data)))
-        data['IMAGEIGVAL'] = np.array(list(map(lambda args: args[6], raw_data)))
-
-        data['MODE'] = ((int(data['POINT']) - 1) % (len(flutter_summaries)//len(analysis.machs))) + 1
-
+    
         if any(map(lambda v: v > 0, data['DAMPING'])):
             idx = np.where(data['DAMPING'] > 0)[0][0] + 1
             critic_vel = np.interp(0, data['DAMPING'][:idx], data['VELOCITY'][:idx])
@@ -88,13 +184,12 @@ def read_f06(filename, analysis: Union[FlutterSubcase, PanelFlutterSubcase]):
                 'MACH': data['MACH NUMBER'],
                 'DENSITY RATIO': data['DENSITY RATIO']
             }
-
+    
             flutter_conditions.append(critic_data)
             critical_modes.append(data)
-
         modes.append(data)
+        
     return modes, critical_modes, flutter_conditions
-
 
 def filter_modes_by_list(modes, mode_list):
     return list(filter(lambda m: m['MODE'] in mode_list, modes))
