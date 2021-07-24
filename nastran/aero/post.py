@@ -1,6 +1,6 @@
 from typing import Union
 
-from aero.AeroelasticAnalysis import FlutterSubcase, PanelFlutterSubcase
+from nastran.aero.analysis import FlutterSubcase, PanelFlutterSubcase
 
 import numpy as np
 import pandas as pd

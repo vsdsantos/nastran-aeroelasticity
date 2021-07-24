@@ -15,9 +15,9 @@ import pandas as pd
 from pyNastran.utils.nastran_utils import run_nastran
 from pyNastran.bdf.cards.properties.shell import PCOMP
 
-from aero.AeroelasticAnalysis import PanelFlutterAnalysisModel
-from aero.AeroelasticPanels import SuperAeroPanel5
-from aero.AeroelasticPostProcessing import read_f06
+from nastran.aero.analysis.panel_flutter import PanelFlutterAnalysisModel
+from nastran.aero.panels import SuperAeroPanel5
+from nastran.aero.post import read_f06
 
 #%% paths for input, output and the nastran exec
 base_path = pathlib.Path().absolute()
