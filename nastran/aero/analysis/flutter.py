@@ -19,15 +19,11 @@ class FlutterSubcase(Subcase):
     This class represents the requirements to the Aeroelastic Flutter Solution 145 of NASTRAN.
     """
 
-    def __init__(self, *args, spc=None):
-        super().__init__(*args)
-        self.spc = spc
+    def __init__(self, id, spc=None, fmethod=None, method=None, **args):
+        super().__init__(id, spc=spc, load=None, **args)
+        self.fmethod = fmethod
+        self.method = method
 
-    @classmethod
-    def create_from_yaml(cls, file_name):
-        with open(file_name, 'r') as file:
-            data = yaml.safe_load(file)
-        return FlutterSubcase.create_from_data(data)
 
 
 class FlutterAnalysisModel(AnalysisModel):
@@ -37,10 +33,10 @@ class FlutterAnalysisModel(AnalysisModel):
     It can be used for conventional wing or aircraft flutter.
     """
 
-    def __init__(self, method='PK', ref_rho=None, ref_chord=None, n_modes=None,
+    def __init__(self, model=None, method='PK', ref_rho=None, ref_chord=None, n_modes=None,
                  frequency_limits=None, densities_ratio=None, machs=None, alphas=None,
                  reduced_frequencies=None, velocities=None, spc=None):
-        super().__init__()
+        super().__init__(model=model)
         self.panels = []
         self.sol = 145
         self.method = method
@@ -53,7 +49,7 @@ class FlutterAnalysisModel(AnalysisModel):
         self.alphas = alphas
         self.reduced_frequencies = reduced_frequencies
         self.velocities = velocities
-        self.spc = None
+        self.spc = spc
 
     def write_machs_and_alphas(self, machs, alphas):
         # TODO: Vary with the used flutter solution method
@@ -65,30 +61,6 @@ class FlutterAnalysisModel(AnalysisModel):
             raise Exception('Flutter method not implemented') 
 
         return aefact
-
-    def create_subcase_from_file(self, sub_id, subcase_file_name):
-        assert sub_id not in self.subcases.keys()
-        
-        sub = FlutterSubcase.create_from_yaml(subcase_file_name)
-        self.subcases[sub_id] = sub
-
-        return sub
-
-    def create_subcase_from_dict(self, sub_id, sub_dict):
-        assert sub_id not in self.subcases.keys()
-
-        sub = FlutterSubcase.create_from_data(sub_dict)
-        self.subcases[sub_id] = sub
-
-        return sub
-
-    def create_subcase(self, sub_id):
-        assert sub_id not in self.subcases.keys()
-        
-        sub = FlutterSubcase.create_from_data()
-        self.subcases[sub_id] = sub
-
-        return sub
 
     def write_global_analysis_cards(self):
 

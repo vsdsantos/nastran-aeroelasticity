@@ -1,35 +1,46 @@
 from abc import ABC, abstractmethod
+from typing import Type
 
 import yaml
 from pyNastran.bdf.bdf import BDF, CaseControlDeck
 
 from nastran.utils import IdUtility, set_object_properties
 
-
 class Subcase:
     """
     Represents a NASTRAN subcase with CASE CONTROL statements.
     """
 
-    def __init__(self, case_control=None):
-        self.case_control = case_control
+    def __init__(self, id, spc=None, load=None, **args):
+        self.id = id
+        self.spc = spc
+        self.load = load
+        set_object_properties(self, args)
+
 
     @classmethod
-    def create_from_dict(cls, data):
-        obj = cls()
-        set_object_properties(obj, data)
-        return obj
+    def create_from_yaml(cls, file_name):
+        with open(file_name, 'r') as file:
+            data = yaml.safe_load(file)
+        return cls.create_from_dict(data['id'], data)
+
+    @classmethod
+    def create_from_dict(cls, sub_id, data):
+        return set_object_properties(cls(sub_id), data)
 
 class AnalysisModel(ABC):
-
-    def __init__(self):
-        self.model = BDF(debug=False)
+    
+    def __init__(self, model=None):
+        self.model = model if model != None else BDF(debug=False)
         self.idutil = IdUtility(self.model)
         self.subcases = {}
         self.params = {}
         self.diags = []
         self.sol = None
         self.interface = None
+
+    def __repr__(self) -> str:
+        return self.model.get_bdf_stats()
 
     def import_from_bdf(self, bdf_file_name: str, sanitize: bool = True, reset_bdf: bool = False):
         # load models and utility
@@ -73,21 +84,29 @@ class AnalysisModel(ABC):
         for key, subcase in data['subcases'].items():
             self.create_subcase_from_dict(key, data=subcase)
 
-    @abstractmethod
-    def create_subcase_from_file(self, sub_id, subcase_file_name):
-        pass
+    def create_subcase_from_file(self, sub_type: Type[Subcase], sub_id, subcase_file_name):
+        assert sub_id not in self.subcases.keys()
+        
+        sub = sub_type.create_from_yaml(subcase_file_name)
+        self.subcases[sub_id] = sub
 
-    @abstractmethod
-    def create_subcase_from_dict(self, sub_id, data):
-        pass
+        return sub
 
-    @abstractmethod
-    def create_subcase(self, sub_id, sub_type):
-        pass
+    def create_subcase_from_dict(self, sub_type: Type[Subcase], sub_id, sub_dict):
+        assert sub_id not in self.subcases.keys()
 
-    @abstractmethod
-    def write_cards_from_subcase(self, sub_id):
-        pass
+        sub = sub_type.create_from_dict(sub_dict)
+        self.subcases[sub_id] = sub
+
+        return sub
+
+    def create_subcase(self, sub_type: Type[Subcase], sub_id):
+        assert sub_id not in self.subcases.keys()
+        
+        sub = sub_type.create_from_dict()
+        self.subcases[sub_id] = sub
+
+        return sub
 
     def write_executive_control_cards(self):
         # Executive Control

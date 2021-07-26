@@ -1,8 +1,27 @@
-
+#%%
 import numpy as np
 
+from nastran.structures.panel import StructuralPlate, LaminatedStructuralPlate
+from nastran.structures.composite import OrthotropicMaterial
 from nastran.aero.superpanels import SuperAeroPanel5
 from nastran.aero.analysis.panel_flutter import PanelFlutterAnalysisModel, PanelFlutterSubcase
+
+#%%
+
+## Setup structural model
+a, b = 100, 100
+p1 = np.array([0, 0, 0])
+p2 = p1 + np.array([a, 0, 0])
+p3 = p1 + np.array([a, b, 0])
+p4 = p1 + np.array([0, b, 0])
+
+# plate = StructuralPlate(p1, p2, p3, p4, 3, 3, 1)
+
+cfrp = OrthotropicMaterial(1, 10, 10, 0.3, 10, 1)
+lam = LaminatedStructuralPlate.create_sawyer_plate(p1, p2, p3, p4, 3, 3, 1, 45, 6, 0.1, cfrp)
+
+
+#%%
 
 config = {
     'type': 'PANELFLUTTER',
@@ -14,8 +33,8 @@ config = {
         [.0, 3000.],                    # the range of frequency (Hz) in modal analysis
     'method': 'PK',                     # the method for solving flutter (it will determine the next parameters
     'densities_ratio': [.5],            # rho/rho_ref -> 1/2 simulates the "one side flow" of the panel
-    'machs': [3.5, 4.5, 5.5, 6.5],    # Mach number
-    'alphas': [.0, .0, .0, .0],          # AoA (°) -> 0 is more conservative
+    'machs': [3.5, 4.5, 5.5, 6.5],      # Mach number
+    'alphas': [.0, .0, .0, .0],         # AoA (°) -> 0 is more conservative
     'reduced_frequencies': 
         [.001, .01, .1, .2, .4, .8],    # reduced frequencies (k)
     'velocities':                       # velocities (mm/s in the case)
@@ -23,9 +42,11 @@ config = {
     }
 
 
-analysis = PanelFlutterAnalysisModel()
-    
-analysis.create_subcase_from_data(1, sub_data)
+analysis = PanelFlutterAnalysisModel(lam.bdf)
+
+#%%
+
+analysis.create_subcase_from_dict(1, config)
 
 #
 spanel_p = SuperAeroPanel5(1)  # init panel

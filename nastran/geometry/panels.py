@@ -4,7 +4,6 @@ import numpy as np
 class Plate:
 
     def __init__(self, p1, p2, p3, p4) -> None:
-        super().__init__()
         self.p1 = np.array(p1)
         self.p2 = np.array(p2)
         self.p3 = np.array(p3)

@@ -6,8 +6,9 @@ from nastran.aero.analysis.flutter import FlutterSubcase, FlutterAnalysisModel
 
 class PanelFlutterSubcase(FlutterSubcase):
 
-    def __init__(self, *args, plate_stiffness=None, vref=None):
-        super().__init__(*args)
+    def __init__(self, id, spc=None, fmethod=None, method=None,
+                 plate_stiffness=None, vref=None, **args):
+        super().__init__(id, spc=spc, fmethod=fmethod, method=method, **args)
         self.plate_stiffness = plate_stiffness
         self.vref = vref
 
@@ -16,10 +17,20 @@ class PanelFlutterAnalysisModel(FlutterAnalysisModel):
     """
     Class to model a panel flutter configuration in Nastran.
     """
-
-    def __init__(self):
-        super().__init__()
-        self.superpanels = []
+    
+    def __init__(self, model=None, method=None, ref_rho=None,
+                ref_chord=None, n_modes=None, frequency_limits=None,
+                densities_ratio=None, machs=None, alphas=None,
+                reduced_frequencies=None, velocities=None, spc=None,
+                superpanels=[]):
+        super().__init__(model=model, method=method, ref_rho=ref_rho,
+                        ref_chord=ref_chord,n_modes=n_modes,
+                        frequency_limits=frequency_limits,
+                        densities_ratio=densities_ratio,
+                        machs=machs, alphas=alphas,
+                        reduced_frequencies=reduced_frequencies,
+                        velocities=velocities, spc=spc)
+        self.superpanels = superpanels
 
     def add_superpanel(self, superpanel):
         self.superpanels.append(superpanel)
