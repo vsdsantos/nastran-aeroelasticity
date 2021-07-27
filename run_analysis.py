@@ -1,12 +1,15 @@
-#%%
+# %%
+
+from nastran.aero.analysis.flutter import FlutterSubcase
 import numpy as np
 
-from nastran.structures.panel import LaminatedStructuralPlate
+from nastran.structures.panel import StructuralPlate, LaminatedStructuralPlate
 from nastran.structures.composite import OrthotropicMaterial
 from nastran.aero.superpanels import SuperAeroPanel5
 from nastran.aero.analysis.panel_flutter import PanelFlutterPistonAnalysisModel, PanelFlutterSubcase
 
-#%%
+
+# %%
 
 ## Setup structural model
 a, b = 100, 100
@@ -22,7 +25,7 @@ nchord, nspan = 10, 10
 lam = LaminatedStructuralPlate.create_sawyer_plate(p1, p2, p3, p4, nspan, nchord, 1, 45, 6, 0.1, cfrp)
 
 
-#%%
+# %%
 
 config = {
     'vref': 1000.,                      # used to calculate the non-dimensional dynamic pressure must be the same in control case (mm/s in the case)
@@ -50,11 +53,12 @@ params =  {
 
 analysis = PanelFlutterPistonAnalysisModel(lam.bdf, params=params)
 analysis.set_global_case_from_dict(config)
-#%%
+
+
+# %%
 
 spanel_p = SuperAeroPanel5(1, p1, p2, p3, p4, nchord, nspan, theory='VANDYKE')
 analysis.add_superpanel(spanel_p)
-# analysis.write_cards()  # write the panels on the pyNastran bdf interface
 
 cases_labels = {
     1: "Loaded edges SS & unloaded edges SS",
@@ -73,17 +77,17 @@ cases_labels = {
 
 spc_cases = {
     1: ('123', '123', '123', '123'),             # loaded edges SS, unloaded edges SS
-    2: ('123', '123', '123456', '123456'),       # loaded edges SS, unloaded edges CP
-    3: ('123', '123', '123', '123456'),          # loaded edges SS, unloaded edges SS/CP
-    4: ('123', '123', '123', ''),                # loaded edges SS, unloaded edges SS/FF
-    5: ('123', '123', '123456', ''),             # loaded edges SS, unloaded edges CP/FF
-    6: ('123', '123', '', ''),                   # loaded edges SS, unloaded edges FF
-    7: ('123456', '123456', '123', '123'),       # loaded edges CP, unloaded edges SS
-    8: ('123456', '123456', '123456', '123456'), # loaded edges CP, unloaded edges CP
-    9: ('123456', '123456', '123', '123456'),    # loaded edges CP, unloaded edges SS & CP
-    10:('123456', '123456', '123', ''),          # loaded edges CP, unloaded edges SS & FF
-    11:('123456', '123456', '123456', ''),       # loaded edges CP, unloaded edges CP & FF
-    12:('123456', '123456', '', ''),             # loaded edges CP, unloaded edges FF
+    # 2: ('123', '123', '123456', '123456'),       # loaded edges SS, unloaded edges CP
+    # 3: ('123', '123', '123', '123456'),          # loaded edges SS, unloaded edges SS/CP
+    # 4: ('123', '123', '123', ''),                # loaded edges SS, unloaded edges SS/FF
+    # 5: ('123', '123', '123456', ''),             # loaded edges SS, unloaded edges CP/FF
+    # 6: ('123', '123', '', ''),                   # loaded edges SS, unloaded edges FF
+    # 7: ('123456', '123456', '123', '123'),       # loaded edges CP, unloaded edges SS
+    # 8: ('123456', '123456', '123456', '123456'), # loaded edges CP, unloaded edges CP
+    # 9: ('123456', '123456', '123', '123456'),    # loaded edges CP, unloaded edges SS & CP
+    # 10:('123456', '123456', '123', ''),          # loaded edges CP, unloaded edges SS & FF
+    # 11:('123456', '123456', '123456', ''),       # loaded edges CP, unloaded edges CP & FF
+    # 12:('123456', '123456', '', ''),             # loaded edges CP, unloaded edges FF
 }
 
 
@@ -98,38 +102,12 @@ for i, spcs in spc_cases.items():
     }
     analysis.create_subcase_from_dict(PanelFlutterSubcase, i, sub_config)
 
-#%%
+
+# %%
 
 analysis.write_cards()
 
-#%%
+# %%
+analysis.model.write_bdf('test.bdf', enddata=True)
 
-prefix = "PFLUTTER-CFRP-AB-{}-NPLIES-{}-SYM".format(ab, nplies)
 
-case_files = dict()
-D11 = 0
-D11s = dict()
-
-for i, theta in enumerate(theta_range):
-    filename = "{prefix}-THETA-{}.bdf".format(theta, prefix=prefix)
-    pcomp = create_pcomp(analysis, theta, thick, nplies)
-    analysis.model.properties[pcomp.pid] = pcomp
-    analysis.model.properties[pcomp.pid].cross_reference(analysis.model)
-    D = analysis.model.properties[pcomp.pid].get_individual_ABD_matrices()[2]
-    
-    if theta == 0:
-        D11 = D[0][0]
-    
-    D11s[theta] = D[0][0]
-        
-    analysis.export_to_bdf("analysis-bdf/"+filename)  # exports to bdf file
-    case_files[i+1] = filename
-
-data_rows_size = len(machs)*n_vel*len(cases)*len(theta_range)*15
-
-print(D11s)
-
-print("Expected data rows: {} rows.".format(data_rows_size))
-print("Expected data size: {} MB".format(data_rows_size*64*7/8e6))
-
-print("D11(theta=0) = {}".format(D11))    

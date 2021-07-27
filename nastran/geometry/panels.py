@@ -14,8 +14,32 @@ class Plate:
         return self.p2 - self.p1
     
     @property
+    def l12(self):
+        return np.linalg.norm(self.d12)
+
+    @property
     def d14(self):
         return self.p4 - self.p1
+
+    @property
+    def l14(self):
+        return np.linalg.norm(self.d14)
+
+    @property
+    def d43(self):
+        return self.p3 - self.p4
+
+    @property
+    def l43(self):
+        return np.linalg.norm(self.d43)
+
+    @property
+    def d23(self):
+        return self.p3 - self.p2
+
+    @property
+    def l23(self):
+        return np.linalg.norm(self.d23)
 
     @property
     def limit_points(self):

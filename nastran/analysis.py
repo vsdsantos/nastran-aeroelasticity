@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Type
+from typing import Dict, Type
 from numpy.lib.utils import deprecate
 
 import yaml
@@ -14,7 +14,9 @@ class CaseControl:
 
     @classmethod
     def create_from_dict(cls, data):
-        return set_object_properties(cls(), data)
+        cc = cls()
+        set_object_properties(cc, data)
+        return cc
 
 class Subcase(CaseControl):
     """
@@ -27,6 +29,10 @@ class Subcase(CaseControl):
         self.load = load
         set_object_properties(self, args)
 
+    @property
+    def properties(self):
+        return self.__dict__
+
     @classmethod
     def create_from_yaml(cls, file_name):
         with open(file_name, 'r') as file:
@@ -35,19 +41,27 @@ class Subcase(CaseControl):
 
     @classmethod
     def create_from_dict(cls, sub_id, data):
-        return set_object_properties(cls(sub_id), data)
+        subcase = cls(sub_id)
+        set_object_properties(subcase, data)
+        return subcase
 
 class AnalysisModel(ABC):
     
-    def __init__(self, model=None):
+    def __init__(self, model:BDF=None,
+                 global_case=None,
+                 subcases:Dict[int,Subcase]={},
+                 params=None,
+                 diags=None,
+                 sol=None,
+                 interface=None):
         self.model = model if model != None else BDF(debug=False)
         self.idutil = IdUtility(self.model)
-        self.global_case = CaseControl()
-        self.subcases = {}
-        self.params = {}
-        self.diags = []
-        self.sol = None
-        self.interface = None
+        self.global_case = global_case if global_case != None else CaseControl()
+        self.subcases = subcases
+        self.params = params
+        self.diags = diags
+        self.sol = sol
+        self.interface = interface
 
     def __repr__(self) -> str:
         return self.model.get_bdf_stats()
@@ -109,7 +123,7 @@ class AnalysisModel(ABC):
     def create_subcase_from_dict(self, sub_type: Type[Subcase], sub_id, sub_dict):
         assert sub_id not in self.subcases.keys()
 
-        sub = sub_type.create_from_dict(sub_dict)
+        sub = sub_type.create_from_dict(sub_id, sub_dict)
         self.subcases[sub_id] = sub
 
         return sub
@@ -129,6 +143,7 @@ class AnalysisModel(ABC):
         print('Done!')
 
     def write_cards(self):
+        self.model.case_control_deck = CaseControlDeck([])
         self._write_executive_control_cards()
         self._write_case_control_cards()
         self._write_params()
@@ -146,20 +161,24 @@ class AnalysisModel(ABC):
         #     diagnostic += '%d,' % diag
         # self.model.executive_control_lines = [diagnostic]
 
-    def _write_case_control_from_list(self, cc, subid, subcase):
-        if subcase.case_control is not None:
-            for card in subcase.case_control:
-                cc.add_parameter_to_local_subcase(subid, card)
+    def _write_case_control_subcase(self, subcase: Subcase):
+        # if subcase.case_control is not None:
+        for key, value in subcase.properties.items():
+            if key in ['id',] or value == None:
+                continue
+            self.model.case_control_deck.add_parameter_to_local_subcase(
+                subcase.id,
+                '{} = {}'.format(key.upper(), value))
 
     def _write_case_control_cards(self):
         # Case Control
-        cc = CaseControlDeck([])
+        cc = self.model.case_control_deck
 
         self._write_global_analysis_cards()
 
-        for key, subcase in self.subcases.items():
-            cc.create_new_subcase(key)
-            self._write_case_control_from_list(cc, key, subcase)
+        for _, subcase in self.subcases.items():
+            cc.create_new_subcase(subcase.id)
+            self._write_case_control_subcase(subcase)
         self.model.case_control_deck = cc
 
     def _write_global_analysis_cards(self):

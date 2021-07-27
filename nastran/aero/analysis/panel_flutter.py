@@ -1,4 +1,9 @@
+
+
+from nastran.analysis import Subcase
+from typing import Dict
 import numpy as np
+from pyNastran.bdf.bdf import BDF
 
 from nastran.aero.superpanels import SuperAeroPanel5, SuperAeroPanel1
 from nastran.aero.analysis.flutter import FlutterSubcase, FlutterAnalysisModel
@@ -18,18 +23,12 @@ class PanelFlutterAnalysisModel(FlutterAnalysisModel):
     Class to model a panel flutter configuration in Nastran.
     """
     
-    def __init__(self, model=None, method=None, ref_rho=None,
-                ref_chord=None, n_modes=None, frequency_limits=None,
-                densities_ratio=None, machs=None, alphas=None,
-                reduced_frequencies=None, velocities=None, spc=None,
-                superpanels=[]):
-        super().__init__(model=model, method=method, ref_rho=ref_rho,
-                        ref_chord=ref_chord,n_modes=n_modes,
-                        frequency_limits=frequency_limits,
-                        densities_ratio=densities_ratio,
-                        machs=machs, alphas=alphas,
-                        reduced_frequencies=reduced_frequencies,
-                        velocities=velocities, spc=spc)
+    def __init__(self, model: BDF = None, global_case = None,
+                 subcases: Dict[int, Subcase] = {},
+                 params=None, diags=None, interface=None,superpanels=[]):
+        super().__init__(model=model, global_case=global_case,
+                        subcases=subcases, params=params, diags=diags,
+                        interface=interface)
         self.superpanels = superpanels
 
     def add_superpanel(self, superpanel):
@@ -38,9 +37,8 @@ class PanelFlutterAnalysisModel(FlutterAnalysisModel):
     def write_cards(self):
         super().write_cards()
         
-        for subcase in self.subcases:
-            for spanel in self.superpanels:
-                self._write_superpanel_cards(spanel, subcase)
+        for spanel in self.superpanels:
+            self._write_superpanel_cards(spanel)
 
         # Validate
         self.model.validate()
@@ -95,25 +93,19 @@ class PanelFlutterPistonAnalysisModel(PanelFlutterAnalysisModel):
     Class to model a panel flutter configuration with Piston Theory in Nastran.
     """
     
-    def __init__(self, model=None, method=None, ref_rho=None,
-                ref_chord=None, n_modes=None, frequency_limits=None,
-                densities_ratio=None, machs=None, alphas=None,
-                reduced_frequencies=None, velocities=None, spc=None,
-                superpanels=[]):
-        super().__init__(model=model, method=method, ref_rho=ref_rho,
-                        ref_chord=ref_chord,n_modes=n_modes,
-                        frequency_limits=frequency_limits,
-                        densities_ratio=densities_ratio,
-                        machs=machs, alphas=alphas,
-                        reduced_frequencies=reduced_frequencies,
-                        velocities=velocities, spc=spc, superpanels=superpanels)
+    # def __init__(self, model: BDF = None, global_case = None,
+    #              subcases: Dict[int, Subcase] = {},
+    #              params=None, diags=None, interface=None,superpanels=[]):
+    #     super().__init__(model=model, global_case=global_case, subcases=subcases,
+    #                      params=params, diags=diags, interface=interface,
+    #                      superpanels=superpanels)
 
     def _write_superpanel_cards(self, superpanel: SuperAeroPanel5):
         # AEFACT cards
         thickness_integrals = self.model.add_aefact(self.idutil.get_next_aefact_id(),
                                                     superpanel.thick_int)
 
-        machs_n_alphas = self._write_machs_and_alphas(self.machs, self.alphas)
+        machs_n_alphas = self._write_machs_and_alphas(self.global_case.machs, self.global_case.alphas)
 
         # PAERO5 card
         paero = self.model.add_paero5(self.idutil.get_next_paero_id(),
@@ -124,7 +116,7 @@ class PanelFlutterPistonAnalysisModel(PanelFlutterAnalysisModel):
         caeros, cords = self._write_caero5_as_panel(superpanel, paero, thickness_integrals)
         self._write_splines2_for_superpanel(superpanel, caeros, cords)
 
-    def _write_caero5_as_panel(self, superpanel, paero, thickness_integrals):
+    def _write_caero5_as_panel(self, superpanel: SuperAeroPanel5, paero, thickness_integrals):
         # CORD2R and CAERO5 cards
         # wind_x_vector = np.array([1., 0., 0.])
 
@@ -147,7 +139,7 @@ class PanelFlutterPistonAnalysisModel(PanelFlutterAnalysisModel):
             cords.append(
                 self.model.add_cord2r(self.idutil.get_next_coord_id(),
                                       origin,
-                                      origin + panel.orthogonal_vector,
+                                      origin + panel.normal,
                                       pxz_i))
 
             # CAERO5 element
@@ -161,7 +153,7 @@ class PanelFlutterPistonAnalysisModel(PanelFlutterAnalysisModel):
                                       p1=panel.p1,
                                       x12=panel.l12,
                                       p4=panel.p4,
-                                      x43=panel.l43,
+                                      x43=panel.l12,
                                       ntheory=panel.theory)
             )
             id_increment = panel.nspan - 1
@@ -170,20 +162,14 @@ class PanelFlutterPistonAnalysisModel(PanelFlutterAnalysisModel):
 
 class PanelFlutterPistonZAEROAnalysisModel(PanelFlutterAnalysisModel):
 
-    def __init__(self, model=None, method=None, ref_rho=None,
-                ref_chord=None, n_modes=None, frequency_limits=None,
-                densities_ratio=None, machs=None, alphas=None,
-                reduced_frequencies=None, velocities=None, spc=None,
-                superpanels=[]):
-        super().__init__(model=model, method=method, ref_rho=ref_rho,
-                        ref_chord=ref_chord,n_modes=n_modes,
-                        frequency_limits=frequency_limits,
-                        densities_ratio=densities_ratio,
-                        machs=machs, alphas=alphas,
-                        reduced_frequencies=reduced_frequencies,
-                        velocities=velocities, spc=spc, superpanels=superpanels)
+    # def __init__(self, model: BDF = None, global_case = None,
+    #              subcases: Dict[int, Subcase] = {},
+    #              params=None, diags=None, interface=None,superpanels=[]):
+    #     super().__init__(model=model, global_case=global_case, subcases=subcases,
+    #                      params=params, diags=diags, interface=interface,
+    #                      superpanels=superpanels)
     
-    def _write_superpanel_cards(self, superpanel, subcase):
+    def _write_superpanel_cards(self, superpanel: SuperAeroPanel1):
         paero = self.model.add_paero1(self.idutil.get_next_paero_id())
 
         elements = {}

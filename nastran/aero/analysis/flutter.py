@@ -1,5 +1,6 @@
 
-from pyNastran.bdf.bdf import CaseControlDeck
+from typing import Dict
+from pyNastran.bdf.bdf import BDF, CaseControlDeck
 
 from nastran.analysis import AnalysisModel, Subcase
 
@@ -33,28 +34,21 @@ class FlutterAnalysisModel(AnalysisModel):
     It can be used for conventional wing or aircraft flutter.
     """
 
-    def __init__(self, model=None, method='PK', ref_rho=None, ref_chord=None, n_modes=None,
-                 frequency_limits=None, densities_ratio=None, machs=None, alphas=None,
-                 reduced_frequencies=None, velocities=None, spc=None):
-        super().__init__(model=model)
-        self.panels = []
-        self.sol = 145
-        self.method = method
-        self.ref_rho = ref_rho
-        self.ref_chord = ref_chord
-        self.n_modes = n_modes
-        self.frequency_limits = frequency_limits
-        self.densities_ratio = densities_ratio
-        self.machs = machs
-        self.alphas = alphas
-        self.reduced_frequencies = reduced_frequencies
-        self.velocities = velocities
-        self.spc = spc
+    # def __init__(self, model: BDF = None, global_case = None,
+    #              subcases: Dict[int, Subcase] = {},
+    #              params=None, diags=None, interface=None):
+    #     super().__init__(model=model,
+    #         global_case=global_case, subcases=subcases,
+    #         params=params, diags=diags,
+    #         sol=145, interface=interface)
+
+    def write_cards(self):
+        super().write_cards()
 
     def _write_machs_and_alphas(self, machs, alphas):
         # TODO: Vary with the used flutter solution method
 
-        if self.method == 'PK':
+        if self.global_case.method == 'PK':
             aefact = self.model.add_aefact(self.idutil.get_next_aefact_id(),
                                      [v for ma in zip(machs, alphas) for v in ma])
         else:
@@ -62,28 +56,17 @@ class FlutterAnalysisModel(AnalysisModel):
 
         return aefact
 
-    def _write_case_control_cards(self):
-        # Case Control
-        cc = CaseControlDeck([])
-        self.model.case_control_deck = cc
-
-        self._write_global_analysis_cards()
-
-        for key, subcase in self.subcases.items():
-            cc.create_new_subcase(key)
-            self.write_case_control_from_list(cc, key, subcase)
-
     def _write_global_analysis_cards(self):
 
         # defines FLFACT cards
-        densities_ratio = self.model.add_flfact(self.idutil.get_next_flfact_id(), self.densities_ratio)
-        machs = self.model.add_flfact(self.idutil.get_next_flfact_id(), self.machs)
-        velocities = self.model.add_flfact(self.idutil.get_next_flfact_id(), self.velocities)
+        densities_ratio = self.model.add_flfact(self.idutil.get_next_flfact_id(), self.global_case.densities_ratio)
+        machs = self.model.add_flfact(self.idutil.get_next_flfact_id(), self.global_case.machs)
+        velocities = self.model.add_flfact(self.idutil.get_next_flfact_id(), self.global_case.velocities)
 
 
         # defines FLUTTER card for flutter subcase
         fmethod = self.model.add_flutter(self.idutil.get_next_flutter_id(),
-                                         method=self.method,
+                                         method=self.global_case.method,
                                          density=densities_ratio.sid,
                                          mach=machs.sid,
                                          reduced_freq_velocity=velocities.sid)
@@ -91,20 +74,20 @@ class FlutterAnalysisModel(AnalysisModel):
         # real eigenvalue method card
         method = self.model.add_eigrl(sid=self.idutil.get_next_method_id(),
                                       norm='MASS',
-                                      nd=self.n_modes,
-                                      v1=self.frequency_limits[0],
-                                      v2=self.frequency_limits[1])
+                                      nd=self.global_case.n_modes,
+                                      v1=self.global_case.frequency_limits[0],
+                                      v2=self.global_case.frequency_limits[1])
         
         # AERO card
-        self.model.add_aero(cref=self.ref_chord, rho_ref=self.ref_rho, velocity=1.0)
+        self.model.add_aero(cref=self.global_case.ref_chord, rho_ref=self.global_case.ref_rho, velocity=1.0)
 
         # MKAERO1 cards
-        self.model.add_mkaero1(self.machs, self.reduced_frequencies)
+        self.model.add_mkaero1(self.global_case.machs, self.global_case.reduced_frequencies)
 
         cc = self.model.case_control_deck
 
-        cc.add_parameter_to_global_subcase('FMETHOD = %d' % fmethod)  # the flutter card id
-        cc.add_parameter_to_global_subcase('METHOD = %d' % method)  # the eigenval analysis card id
+        cc.add_parameter_to_global_subcase('FMETHOD = %d' % fmethod.sid)  # the flutter card id
+        cc.add_parameter_to_global_subcase('METHOD = %d' % method.sid)  # the eigenval analysis card id
 
 
         

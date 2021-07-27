@@ -1,5 +1,5 @@
 
-from numpy.lib.utils import deprecate
+from typing import Any, Dict
 from nastran.geometry.panels import RectangularPlate
 from nastran.aero.panels import AeroPanel, AeroPanel1, AeroPanel5
 
@@ -11,7 +11,7 @@ class SuperAeroPanel(RectangularPlate):
     It's used to simulate chordwise flexibility with aerodynamic strip theories.
     """
 
-    def __init__(self, eid, p1, p2, p3, p4, nchord, nspan, aeropanels=None):
+    def __init__(self, eid, p1, p2, p3, p4, nchord, nspan, aeropanels: Dict[Any, AeroPanel]={}):
         """
         Parameters
         ----------
@@ -23,7 +23,6 @@ class SuperAeroPanel(RectangularPlate):
         self.nspan = nspan
         self.aeropanels = aeropanels
 
-    @deprecate
     def set_panel_properties_equally(self, *args):
         self.aeropanels[0].set_panel_properties(*args)
         ignored_props = vars(AeroPanel(None))
@@ -40,13 +39,12 @@ class SuperAeroPanel1(SuperAeroPanel):
 
     """
 
-    def __init__(self, p1, p2, p3, p4, eid, min_mach=np.sqrt(2)):
-        super().__init__(p1, p2, p3, p4, eid)
+    def __init__(self, eid, p1, p2, p3, p4, nchord, nspan, aeropanels: Dict[Any, AeroPanel] = {}, min_mach=np.sqrt(2)):
+        super().__init__(eid, p1, p2, p3, p4, nchord, nspan, aeropanels=aeropanels)
         self.min_mach = min_mach
         self._create_aero1_panels()
 
     def _create_aero1_panels(self):
-        self.aeropanels = {}
 
         main_panel = AeroPanel1(*self.limit_points, self.nspan, self.nchord)
 
@@ -78,7 +76,7 @@ class SuperAeroPanel5(SuperAeroPanel):
     A superelement which holds CEARO5 elements (strips) for modeling chordwise flexiblity.
     """
 
-    def __init__(self, eid, p1, p2, p3, p4, nchord, nspan, aeropanels=None, theory='PISTON'):
+    def __init__(self, eid, p1, p2, p3, p4, nchord, nspan, aeropanels: Dict[int, AeroPanel5]={}, theory='PISTON'):
         super().__init__(eid, p1, p2, p3, p4, nchord, nspan, aeropanels=aeropanels)
 
         # panel properties
@@ -89,7 +87,6 @@ class SuperAeroPanel5(SuperAeroPanel):
         self._create_aero5_panels(theory)
 
     def _create_aero5_panels(self, theory):
-        self.aeropanels = dict()
         for i in range(self.nchord):
             p1 = self.p1 + self.d12 * i / self.nchord
             p4 = self.p4 + self.d12 * i / self.nchord
