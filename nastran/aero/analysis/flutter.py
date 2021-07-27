@@ -51,7 +51,7 @@ class FlutterAnalysisModel(AnalysisModel):
         self.velocities = velocities
         self.spc = spc
 
-    def write_machs_and_alphas(self, machs, alphas):
+    def _write_machs_and_alphas(self, machs, alphas):
         # TODO: Vary with the used flutter solution method
 
         if self.method == 'PK':
@@ -62,7 +62,18 @@ class FlutterAnalysisModel(AnalysisModel):
 
         return aefact
 
-    def write_global_analysis_cards(self):
+    def _write_case_control_cards(self):
+        # Case Control
+        cc = CaseControlDeck([])
+        self.model.case_control_deck = cc
+
+        self._write_global_analysis_cards()
+
+        for key, subcase in self.subcases.items():
+            cc.create_new_subcase(key)
+            self.write_case_control_from_list(cc, key, subcase)
+
+    def _write_global_analysis_cards(self):
 
         # defines FLFACT cards
         densities_ratio = self.model.add_flfact(self.idutil.get_next_flfact_id(), self.densities_ratio)
@@ -90,20 +101,10 @@ class FlutterAnalysisModel(AnalysisModel):
         # MKAERO1 cards
         self.model.add_mkaero1(self.machs, self.reduced_frequencies)
 
-        return fmethod.sid, method.sid
-
-
-    def write_case_control_cards(self):
-        # Case Control
-        cc = CaseControlDeck([])
-
-        fmethod, method = self.write_global_analysis_cards()
+        cc = self.model.case_control_deck
 
         cc.add_parameter_to_global_subcase('FMETHOD = %d' % fmethod)  # the flutter card id
         cc.add_parameter_to_global_subcase('METHOD = %d' % method)  # the eigenval analysis card id
 
-        for key, subcase in self.subcases.items():
-            cc.create_new_subcase(key)
-            self.write_case_control_from_list(cc, key, subcase)
 
-        self.model.case_control_deck = cc
+        

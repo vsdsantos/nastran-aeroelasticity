@@ -1,4 +1,5 @@
 
+from numpy.lib.utils import deprecate
 from nastran.geometry.panels import RectangularPlate
 from nastran.aero.panels import AeroPanel, AeroPanel1, AeroPanel5
 
@@ -10,7 +11,7 @@ class SuperAeroPanel(RectangularPlate):
     It's used to simulate chordwise flexibility with aerodynamic strip theories.
     """
 
-    def __init__(self, p1, p2, p3, p4, eid, aeropanels=None):
+    def __init__(self, eid, p1, p2, p3, p4, nchord, nspan, aeropanels=None):
         """
         Parameters
         ----------
@@ -18,8 +19,11 @@ class SuperAeroPanel(RectangularPlate):
         """
         super().__init__(p1, p2, p3, p4)
         self.eid = eid
+        self.nchord = nchord
+        self.nspan = nspan
         self.aeropanels = aeropanels
 
+    @deprecate
     def set_panel_properties_equally(self, *args):
         self.aeropanels[0].set_panel_properties(*args)
         ignored_props = vars(AeroPanel(None))
@@ -39,8 +43,9 @@ class SuperAeroPanel1(SuperAeroPanel):
     def __init__(self, p1, p2, p3, p4, eid, min_mach=np.sqrt(2)):
         super().__init__(p1, p2, p3, p4, eid)
         self.min_mach = min_mach
+        self._create_aero1_panels()
 
-    def create_aero1_panels(self):
+    def _create_aero1_panels(self):
         self.aeropanels = {}
 
         main_panel = AeroPanel1(*self.limit_points, self.nspan, self.nchord)
@@ -68,32 +73,30 @@ class SuperAeroPanel1(SuperAeroPanel):
         self.aeropanels['left'] = left_panel
         self.aeropanels['right'] = right_panel
 
-    def init(self):
-        # generate the AeroPanel objects
-        self.create_aero1_panels()
-
 class SuperAeroPanel5(SuperAeroPanel):
     """
     A superelement which holds CEARO5 elements (strips) for modeling chordwise flexiblity.
     """
 
-    def __init__(self, p1, p2, p3, p4, eid, aeropanels=None, theory='PISTON'):
-        super().__init__(p1, p2, p3, p4, eid, aeropanels)
-
-        # generate the AeroPanel objects
-        self.create_aero5_panels()
+    def __init__(self, eid, p1, p2, p3, p4, nchord, nspan, aeropanels=None, theory='PISTON'):
+        super().__init__(eid, p1, p2, p3, p4, nchord, nspan, aeropanels=aeropanels)
 
         # panel properties
-        thickness_int = [0., 0., 0., 0., 0., 0.]  # TODO: calculate on time
-        control_surf = [0. for _ in range(self.nspan)]  # for each strip TODO: make this customizable
-        self.set_panel_properties_equally(theory, thickness_int, control_surf)
+        self.thick_int = [0., 0., 0., 0., 0., 0.]  # TODO: calculate on time
+        self.ctrl_surf = [0. for _ in range(self.nspan)]  # for each strip TODO: make this customizable
 
-    def create_aero5_panels(self):
-        panels = dict()
-        for i in self.aeropanels.items():
+        # generate the AeroPanel objects
+        self._create_aero5_panels(theory)
+
+    def _create_aero5_panels(self, theory):
+        self.aeropanels = dict()
+        for i in range(self.nchord):
             p1 = self.p1 + self.d12 * i / self.nchord
             p4 = self.p4 + self.d12 * i / self.nchord
             p2 = p1 + self.d12 / self.nchord
             p3 = p4 + self.d12 / self.nchord
-            panels[i] = AeroPanel5(p1, p2, p3, p4, 1, self.nspan)
+            self.aeropanels[i] = AeroPanel5(p1, p2, p3, p4, 1, self.nspan, theory=theory,
+                thickness_integrals=self.thick_int,
+                control_surface_ratios=self.ctrl_surf)
+        
 

@@ -1,12 +1,22 @@
 from abc import ABC, abstractmethod
 from typing import Type
+from numpy.lib.utils import deprecate
 
 import yaml
 from pyNastran.bdf.bdf import BDF, CaseControlDeck
 
 from nastran.utils import IdUtility, set_object_properties
 
-class Subcase:
+class ExecutiveControl:
+    pass
+
+class CaseControl:
+
+    @classmethod
+    def create_from_dict(cls, data):
+        return set_object_properties(cls(), data)
+
+class Subcase(CaseControl):
     """
     Represents a NASTRAN subcase with CASE CONTROL statements.
     """
@@ -16,7 +26,6 @@ class Subcase:
         self.spc = spc
         self.load = load
         set_object_properties(self, args)
-
 
     @classmethod
     def create_from_yaml(cls, file_name):
@@ -33,6 +42,7 @@ class AnalysisModel(ABC):
     def __init__(self, model=None):
         self.model = model if model != None else BDF(debug=False)
         self.idutil = IdUtility(self.model)
+        self.global_case = CaseControl()
         self.subcases = {}
         self.params = {}
         self.diags = []
@@ -42,6 +52,7 @@ class AnalysisModel(ABC):
     def __repr__(self) -> str:
         return self.model.get_bdf_stats()
 
+    @deprecate
     def import_from_bdf(self, bdf_file_name: str, sanitize: bool = True, reset_bdf: bool = False):
         # load models and utility
         base_model = BDF(debug=False)
@@ -84,7 +95,10 @@ class AnalysisModel(ABC):
         for key, subcase in data['subcases'].items():
             self.create_subcase_from_dict(key, data=subcase)
 
-    def create_subcase_from_file(self, sub_type: Type[Subcase], sub_id, subcase_file_name):
+    def set_global_case_from_dict(self, data):
+        self.global_case = CaseControl.create_from_dict(data)
+
+    def create_subcase_from_yaml(self, sub_type: Type[Subcase], sub_id, subcase_file_name):
         assert sub_id not in self.subcases.keys()
         
         sub = sub_type.create_from_yaml(subcase_file_name)
@@ -108,7 +122,21 @@ class AnalysisModel(ABC):
 
         return sub
 
-    def write_executive_control_cards(self):
+    def export_to_bdf(self, output_bdf):
+        # Write output
+        print('Writing bdf file...')
+        self.model.write_bdf(output_bdf, enddata=True)
+        print('Done!')
+
+    def write_cards(self):
+        self._write_executive_control_cards()
+        self._write_case_control_cards()
+        self._write_params()
+
+        # Validate
+        self.model.validate()
+
+    def _write_executive_control_cards(self):
         # Executive Control
         self.model.sol = self.sol
 
@@ -118,39 +146,30 @@ class AnalysisModel(ABC):
         #     diagnostic += '%d,' % diag
         # self.model.executive_control_lines = [diagnostic]
 
-    def write_case_control_from_list(self, cc, subid, subcase):
+    def _write_case_control_from_list(self, cc, subid, subcase):
         if subcase.case_control is not None:
             for card in subcase.case_control:
                 cc.add_parameter_to_local_subcase(subid, card)
 
-    def write_case_control_cards(self):
+    def _write_case_control_cards(self):
         # Case Control
         cc = CaseControlDeck([])
 
+        self._write_global_analysis_cards()
+
         for key, subcase in self.subcases.items():
             cc.create_new_subcase(key)
-            self.write_case_control_from_list(cc, key, subcase)
+            self._write_case_control_from_list(cc, key, subcase)
         self.model.case_control_deck = cc
 
-    def write_params(self):
+    def _write_global_analysis_cards(self):
+        pass
+
+    def _write_params(self):
         # params
         for key, param in self.params.items():
             if hasattr(param, '__iter__'):  # check if object is iterable
                 self.model.add_param(key=key, values=list(param))
             else:
                 self.model.add_param(key=key, values=[param])
-
-    def write_cards(self):
-        self.write_executive_control_cards()
-        self.write_case_control_cards()
-        self.write_params()
-
-        # Validate
-        self.model.validate()
-
-    def export_to_bdf(self, output_bdf):
-        # Write output
-        print('Writing bdf file...')
-        self.model.write_bdf(output_bdf, enddata=True)
-        print('Done!')
 
