@@ -65,7 +65,7 @@ class PanelFlutterAnalysisModel(FlutterAnalysisModel):
                                    caero=caeros[i].eid,
                                    # Coordinate system of the CAERO5 element
                                    # (Y-Axis must be colinear with "Elastic Axis")
-                                   cid=0 if cords == None else cords[i].cid,
+                                   cid=0 if cords is None else cords[i].cid,
                                    id1=caeros[i].eid,
                                    id2=caeros[i].eid + superpanel.nspan - 1,
                                    setg=grid_group.sid,
@@ -84,7 +84,7 @@ class PanelFlutterAnalysisModel(FlutterAnalysisModel):
                                box2=elements['main'].eid + elements['main'].nspan * elements['main'].nchord - 1,
                                setg=grid_group.sid)
 
-    def _write_superpanel_cards(self):
+    def _write_superpanel_cards(self, **args):
         pass
 
 

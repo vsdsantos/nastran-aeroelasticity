@@ -13,7 +13,7 @@ class ExecutiveControl:
 class CaseControl:
 
     @classmethod
-    def create_from_dict(cls, data):
+    def create_from_dict(cls, data, **args):
         cc = cls()
         set_object_properties(cc, data)
         return cc
@@ -54,9 +54,9 @@ class AnalysisModel(ABC):
                  diags=None,
                  sol=None,
                  interface=None):
-        self.model = model if model != None else BDF(debug=False)
+        self.model = model if model is not None else BDF(debug=False)
         self.idutil = IdUtility(self.model)
-        self.global_case = global_case if global_case != None else CaseControl()
+        self.global_case = global_case if global_case is not None else CaseControl()
         self.subcases = subcases
         self.params = params
         self.diags = diags
@@ -100,6 +100,7 @@ class AnalysisModel(ABC):
                 self.model.add_card_lines(lines, key, comment=comments)
         print('Done!')
 
+    @deprecate
     def load_analysis_from_yaml(self, yaml_file_name: str):
         with open(yaml_file_name, 'r') as file:
             data = yaml.safe_load(file)
@@ -107,13 +108,13 @@ class AnalysisModel(ABC):
         self.diags = data['diags']
         self.interface = data['interface']
         for key, subcase in data['subcases'].items():
-            self.create_subcase_from_dict(key, data=subcase)
+            self.create_subcase_from_dict(Subcase, key, subcase)
 
     def set_global_case_from_dict(self, data):
         self.global_case = CaseControl.create_from_dict(data)
 
     def create_subcase_from_yaml(self, sub_type: Type[Subcase], sub_id, subcase_file_name):
-        assert sub_id not in self.subcases.keys()
+        # assert sub_id not in self.subcases.keys()
         
         sub = sub_type.create_from_yaml(subcase_file_name)
         self.subcases[sub_id] = sub
@@ -121,7 +122,7 @@ class AnalysisModel(ABC):
         return sub
 
     def create_subcase_from_dict(self, sub_type: Type[Subcase], sub_id, sub_dict):
-        assert sub_id not in self.subcases.keys()
+        # assert sub_id not in self.subcases.keys()
 
         sub = sub_type.create_from_dict(sub_id, sub_dict)
         self.subcases[sub_id] = sub
@@ -129,7 +130,7 @@ class AnalysisModel(ABC):
         return sub
 
     def create_subcase(self, sub_type: Type[Subcase], sub_id):
-        assert sub_id not in self.subcases.keys()
+        # assert sub_id not in self.subcases.keys()
         
         sub = sub_type.create_from_dict()
         self.subcases[sub_id] = sub
@@ -164,7 +165,7 @@ class AnalysisModel(ABC):
     def _write_case_control_subcase(self, subcase: Subcase):
         # if subcase.case_control is not None:
         for key, value in subcase.properties.items():
-            if key in ['id',] or value == None:
+            if key in ['id',] or value is None:
                 continue
             self.model.case_control_deck.add_parameter_to_local_subcase(
                 subcase.id,

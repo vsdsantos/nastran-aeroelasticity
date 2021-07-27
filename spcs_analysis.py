@@ -27,7 +27,7 @@ nastran_exe = r'C:\Program Files\MSC.Software\NaPa_SE\2020\Nastran\bin\nast20200
 
 
 def sym_ply(theta, nplies): # theta, -theta, -theta, theta
-    assert nplies % 2 == 0
+    # assert nplies % 2 == 0
     thetas = []
     for i in range(int(nplies/2)):
         if i % 2 == 0:

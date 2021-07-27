@@ -56,7 +56,7 @@ class Ply:
     @classmethod
     def create_sawyer_ply(cls, pid, theta, nplies, thick, mat):
         # theta, -theta, -theta, theta
-        assert nplies % 2 == 0
+        # assert nplies % 2 == 0
         thetas = []
         for i in range(int(nplies/2)):
             if i % 2 == 0:

@@ -32,7 +32,7 @@ FLUTTER_DATA_KEYS = {
 p_header = re.compile(r"(?P<label>.+(?=SUBCASE))(?P<subcase>SUBCASE\s\d+)")
 
 def parse_summary_header(header):
-    assert len(header) == 3
+    # assert len(header) == 3
     
     line1, line2, line3 = header[0], header[1], header[2]
     

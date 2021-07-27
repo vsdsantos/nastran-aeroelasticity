@@ -48,7 +48,7 @@ class AeroPanel5(AeroPanel):
         self.set_panel_properties(theory, thickness_integrals, control_surface_ratios)
 
     def set_panel_properties(self, theory, thickness_int, control_surf):        
-        assert control_surf == None or len(control_surf) == self.nspan
+        # assert control_surf == None or len(control_surf) == self.nspan
 
         self.thickness_integrals = thickness_int
         self.control_surface_ratios = control_surf

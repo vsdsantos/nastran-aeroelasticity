@@ -1,5 +1,7 @@
 
 from typing import Any, Dict
+
+from numpy.lib.utils import deprecate
 from nastran.geometry.panels import RectangularPlate
 from nastran.aero.panels import AeroPanel, AeroPanel1, AeroPanel5
 
@@ -22,17 +24,6 @@ class SuperAeroPanel(RectangularPlate):
         self.nchord = nchord
         self.nspan = nspan
         self.aeropanels = aeropanels
-
-    def set_panel_properties_equally(self, *args):
-        self.aeropanels[0].set_panel_properties(*args)
-        ignored_props = vars(AeroPanel(None))
-        for k, panel in self.aeropanels.items():
-            if k == 0:
-                continue
-            for prop in vars(panel).keys():
-                if prop in ignored_props:
-                    continue
-                setattr(panel, prop, getattr(self.aeropanels[0], prop))
 
 class SuperAeroPanel1(SuperAeroPanel):
     """
