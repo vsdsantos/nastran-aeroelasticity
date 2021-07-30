@@ -15,7 +15,7 @@ class OrthotropicMaterial:
         self.rho = rho
 
     def to_mat8(self) -> MAT8:
-        return MAT8(self.mid, self.E1, self.E2, self.nu12, self.G12, self.rho)
+        return MAT8(self.mid, self.E1, self.E2, self.nu12, g12=self.G12, rho=self.rho)
 
 
 class Sheet:

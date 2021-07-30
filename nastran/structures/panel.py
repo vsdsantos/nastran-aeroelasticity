@@ -36,8 +36,8 @@ class StructuralPlate(RectangularPlate):
         n0 = self.firstNid
         nodes = []
         for i in range(self.nchord+1):
-            n1 = n0 + i*self.nchord
-            nodes.append(list(range(n1, n1+self.nspan)))
+            n1 = n0 + i*(self.nchord+1)
+            nodes.append(list(range(n1, n1+self.nspan+1)))
         return nodes
 
     @property
@@ -89,7 +89,7 @@ class StructuralPlate(RectangularPlate):
                 g2 = g1 + 1
                 g3 = g2 + self.nspan + 1
                 g4 = g1 + self.nspan + 1
-                self.bdf.add_cquad4(self.firstEid + counter, self.pid, [g1, g2, g3, g4])
+                self.bdf.add_cquad4(self.firstEid + counter, self.pid, [g1, g2, g3, g4], theta_mcid=90.0)
                 counter += 1
 
     def generate_mesh(self) -> BDF:

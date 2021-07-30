@@ -34,13 +34,13 @@ class FlutterAnalysisModel(AnalysisModel):
     It can be used for conventional wing or aircraft flutter.
     """
 
-    # def __init__(self, model: BDF = None, global_case = None,
-    #              subcases: Dict[int, Subcase] = {},
-    #              params=None, diags=None, interface=None):
-    #     super().__init__(model=model,
-    #         global_case=global_case, subcases=subcases,
-    #         params=params, diags=diags,
-    #         sol=145, interface=interface)
+    def __init__(self, model: BDF = None, global_case = None,
+                 subcases: Dict[int, Subcase] = {},
+                 params=None, diags=None, interface=None):
+        super().__init__(model=model,
+            global_case=global_case, subcases=subcases,
+            params=params, diags=diags,
+            sol=145, interface=interface)
 
     def write_cards(self):
         super().write_cards()
@@ -72,7 +72,7 @@ class FlutterAnalysisModel(AnalysisModel):
                                          reduced_freq_velocity=velocities.sid)
 
         # real eigenvalue method card
-        method = self.model.add_eigrl(sid=self.idutil.get_next_method_id(),
+        method = self.model.add_eigrl(sid=self.idutil.get_next_method_id()+100,
                                       norm='MASS',
                                       nd=self.global_case.n_modes,
                                       v1=self.global_case.frequency_limits[0],

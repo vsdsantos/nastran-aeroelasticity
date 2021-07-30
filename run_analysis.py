@@ -20,7 +20,7 @@ p4 = p1 + np.array([0, b, 0])
 
 # plate = StructuralPlate(p1, p2, p3, p4, 3, 3, 1)
 
-cfrp = OrthotropicMaterial(1, 10, 10, 0.3, 10, 1)
+cfrp = OrthotropicMaterial(1, 54000, 18000, 0.3, 7200, 2.6e-9)
 nchord, nspan = 10, 10
 lam = LaminatedStructuralPlate.create_sawyer_plate(p1, p2, p3, p4, nspan, nchord, 1, 45, 6, 0.1, cfrp)
 
@@ -41,7 +41,7 @@ config = {
     'reduced_frequencies': 
         [.001, .01, .1, .2, .4, .8],    # reduced frequencies (k) (check influence)
     'velocities':                       # velocities (mm/s in the case)
-        np.linspace(0, 100, 10)*1000,
+        np.linspace(10, 100, 10)*1000,
 }
 
 params =  {
@@ -77,7 +77,7 @@ cases_labels = {
 
 spc_cases = {
     1: ('123', '123', '123', '123'),             # loaded edges SS, unloaded edges SS
-    # 2: ('123', '123', '123456', '123456'),       # loaded edges SS, unloaded edges CP
+    2: ('123', '123', '123456', '123456'),       # loaded edges SS, unloaded edges CP
     # 3: ('123', '123', '123', '123456'),          # loaded edges SS, unloaded edges SS/CP
     # 4: ('123', '123', '123', ''),                # loaded edges SS, unloaded edges SS/FF
     # 5: ('123', '123', '123456', ''),             # loaded edges SS, unloaded edges CP/FF
@@ -91,14 +91,22 @@ spc_cases = {
 }
 
 
+limit_nodes = [
+    lam.chordwise_nodes[0],
+    lam.chordwise_nodes[-1],
+    lam.spanwise_nodes[0][1:-1],
+    lam.spanwise_nodes[-1][1:-1],
+    ]
+
 for i, spcs in spc_cases.items():
-    for comp, nds in zip(list(spcs), list(lam.corner_nodes)):
+    spc_id = analysis.idutil.get_next_sid()
+    for comp, nds in zip(list(spcs), list(limit_nodes)):
         if comp == '':
             continue
-        analysis.model.add_spc1(i, comp, nds, comment=cases_labels[i])
+        analysis.model.add_spc1(spc_id, comp, nds, comment=cases_labels[i])
     sub_config = {
         'LABEL': cases_labels[i],
-        'SPC': i,
+        'SPC': spc_id,
     }
     analysis.create_subcase_from_dict(PanelFlutterSubcase, i, sub_config)
 

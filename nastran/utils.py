@@ -79,3 +79,9 @@ class IdUtility:
 
     def get_next_coord_id(self):
         return self.get_last_coord_id() + 1
+    
+    def get_last_sid(self):
+        return _get_last_id_from_ids(list(self.model.spcs.keys()))
+
+    def get_next_sid(self):
+        return self.get_last_sid() + 1
