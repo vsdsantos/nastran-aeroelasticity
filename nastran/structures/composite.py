@@ -7,12 +7,12 @@ from pyNastran.bdf.cards.materials import MAT8
 class OrthotropicMaterial:
 
     def __init__(self, mid, E1, E2, nu12, G12, rho) -> None:
-        self.mid = mid
-        self.E1 = E1
-        self.E2 = E2
-        self.nu12 = nu12
-        self.G12 = G12
-        self.rho = rho
+        self.mid = int(mid)
+        self.E1 = float(E1)
+        self.E2 = float(E2)
+        self.nu12 = float(nu12)
+        self.G12 = float(G12)
+        self.rho = float(rho)
 
     def to_mat8(self) -> MAT8:
         return MAT8(self.mid, self.E1, self.E2, self.nu12, g12=self.G12, rho=self.rho)
@@ -22,8 +22,8 @@ class Sheet:
 
     def __init__(self, mat: OrthotropicMaterial, thick: float, theta=0.0) -> None:
         self.mat = mat
-        self.thick = thick
-        self.theta = theta
+        self.thick = float(thick)
+        self.theta = float(theta)
 
 class Ply:
 

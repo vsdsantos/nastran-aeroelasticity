@@ -20,7 +20,7 @@ p4 = p1 + np.array([0, b, 0])
 
 # plate = StructuralPlate(p1, p2, p3, p4, 3, 3, 1)
 
-cfrp = OrthotropicMaterial(1, 54000, 18000, 0.3, 7200, 2.6e-9)
+cfrp = OrthotropicMaterial(1, 54000., 18000., 0.3, 7200., 2.6e-9)
 nchord, nspan = 10, 10
 lam = LaminatedStructuralPlate.create_sawyer_plate(p1, p2, p3, p4, nspan, nchord, 1, 45, 6, 0.1, cfrp)
 
@@ -116,6 +116,6 @@ for i, spcs in spc_cases.items():
 analysis.write_cards()
 
 # %%
-analysis.model.write_bdf('test.bdf', enddata=True)
+analysis.model.write_bdf('pflutter.bdf', enddata=True)
 
 
