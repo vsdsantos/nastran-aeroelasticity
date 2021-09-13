@@ -19,7 +19,8 @@ p4 = p1 + np.array([0, b, 0])
 
 cfrp = OrthotropicMaterial(1, 10, 10, 0.3, 10, 1)
 nchord, nspan = 10, 10
-lam = LaminatedStructuralPlate.create_sawyer_plate(p1, p2, p3, p4, nspan, nchord, 1, 45, 6, 0.1, cfrp)
+lam = LaminatedStructuralPlate.create_sawyer_plate(p1, p2, p3, p4, nspan, nchord,
+    pid=1, theta=45, nplies=6, thick=0.1, mat=cfrp)
 
 
 #%%
@@ -89,24 +90,7 @@ spc_cases = {
 
 for i, spcs in spc_cases.items():
     for comp, nds in zip(list(spcs), list(lam.corner_nodes)):
-        if comp == '':
-            continue
-        analysis.model.add_spc1(i, comp, nds, comment=cases_labels[i])
-    sub_config = {
-        'LABEL': cases_labels[i],
-        'SPC': i,
-    }
-    analysis.create_subcase_from_dict(PanelFlutterSubcase, i, sub_config)
-
-#%%
-
-analysis.write_cards()
-
-#%%
-
-prefix = "PFLUTTER-CFRP-AB-{}-NPLIES-{}-SYM".format(ab, nplies)
-
-case_files = dict()
+        if comp == '':create_sawyer_ply
 D11 = 0
 D11s = dict()
 

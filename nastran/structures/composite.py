@@ -54,7 +54,7 @@ class Ply:
         return PCOMP(self.pid, self.mids, self.thicknesses, self.thetas)
     
     @classmethod
-    def create_sawyer_ply(cls, pid, theta, nplies, thick, mat):
+    def angle_ply(cls, pid, theta, nplies, thick, mat):
         # theta, -theta, -theta, theta
         # assert nplies % 2 == 0
         thetas = []

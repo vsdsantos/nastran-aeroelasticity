@@ -116,7 +116,7 @@ class LaminatedStructuralPlate(StructuralPlate):
 
     @classmethod
     def create_sawyer_plate(cls, p1, p2, p3, p4, nspan, nchord, pid, theta, nplies, thick, mat):
-        ply = Ply.create_sawyer_ply(pid, theta, nplies, thick, mat)
+        ply = Ply.angle_ply(pid, theta, nplies, thick, mat)
         plate = LaminatedStructuralPlate(p1, p2, p3, p4, nspan, nchord, ply)
         plate.generate_mesh()
         return plate
