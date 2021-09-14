@@ -90,17 +90,9 @@ spc_cases = {
     # 12:('123456', '123456', '', ''),             # loaded edges CP, unloaded edges FF
 }
 
-
-limit_nodes = [
-    lam.chordwise_nodes[0],
-    lam.chordwise_nodes[-1],
-    lam.spanwise_nodes[0][1:-1],
-    lam.spanwise_nodes[-1][1:-1],
-    ]
-
 for i, spcs in spc_cases.items():
     spc_id = analysis.idutil.get_next_sid()
-    for comp, nds in zip(list(spcs), list(limit_nodes)):
+    for comp, nds in zip(list(spcs), lam.limit_nodes()):
         if comp == '':
             continue
         analysis.model.add_spc1(spc_id, comp, nds, comment=cases_labels[i])
@@ -118,4 +110,32 @@ analysis.write_cards()
 # %%
 analysis.model.write_bdf('pflutter.bdf', enddata=True)
 
+#%%
+from nastran.aero.post import read_f06
 
+df = read_f06("pflutter.f06")
+
+#%%
+from nastran.aero.post import read_results
+
+
+def calc_adm_dyn_pressure(vel, mach, D, analysis):
+    vref = analysis.subcases[1].vref
+    a = analysis.subcases[1].ref_chord
+    rho = analysis.subcases[1].ref_rho
+    return (rho * (vel * vref) ** 2) * (a ** 3) / (np.sqrt(mach ** 2 - 1) * D)
+
+df = read_results(["pflutter.f06"], [45])
+
+#%%
+from nastran.aero.post import get_critical_points
+critic_df = get_critical_points(df)
+
+#%%
+
+from nastran.aero.post import plot_vf_vg
+
+
+plot_vf_vg(df.xs((1,3.5)))
+
+# %%

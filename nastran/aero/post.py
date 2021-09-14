@@ -1,6 +1,9 @@
 from typing import Union
 
-from nastran.aero.analysis import FlutterSubcase, PanelFlutterSubcase
+from pandas.core.frame import DataFrame
+
+from nastran.aero.analysis.flutter import FlutterSubcase
+from nastran.aero.analysis.panel_flutter import PanelFlutterSubcase
 
 import numpy as np
 import pandas as pd
@@ -60,21 +63,18 @@ def parse_summary_header(header):
 def parse_content(content):
     data = []
     for line in content:
-        data.append(list(map(lambda entry: float(entry), line.split())))
-        # for i, k in enumerate(FLUTTER_DATA_KEYS):
-            # data.append(np.array(list(map(lambda args: args, raw_data))))
+        entries = line.split()
+        inner_data = []
+        for entry in entries:
+            try:
+                e = float(entry)
+            except ValueError:
+                e = np.nan
+            finally:
+                inner_data.append(e)
+        data.append(inner_data)
         
     return data
-
-    # data['KFREQ'] = np.array(list(map(lambda args: args[0], raw_data)))
-    # data['inv_KFREQ'] = np.array(list(map(lambda args: args[1], raw_data)))
-    # data['VELOCITY'] = np.absolute(np.array(list(map(lambda args: args[2], raw_data))))  # makes velocities positive
-    # data['DAMPING'] = np.array(list(map(lambda args: args[3], raw_data)))
-    # data['FREQUENCY'] = np.array(list(map(lambda args: args[4], raw_data)))
-    # data['REALEIGVAL'] = np.array(list(map(lambda args: args[5], raw_data)))
-    # data['IMAGEIGVAL'] = np.array(list(map(lambda args: args[6], raw_data)))
-
-    # data['MODE'] = ((int(data['POINT']) - 1) % (len(flutter_summaries)//len(analysis.machs))) + 1
 
 SKIP_LINE_SET = {"*** USER INFORMATION MESSAGE"}
 
@@ -113,7 +113,7 @@ def parse_to_df(parsed_data, info, last_df):
     df.index = index
     return df
 
-def read_f06(filename, analysis: Union[FlutterSubcase, PanelFlutterSubcase]):
+def read_f06(filename):
     with open(filename, 'r') as file:
         raw_lines = file.readlines()
 
@@ -139,15 +139,106 @@ def read_f06(filename, analysis: Union[FlutterSubcase, PanelFlutterSubcase]):
                              data[-1] if len(data)>0 else None)
             
             data.append(df)
-            
-            # flutter_summaries.append(content[i + 1 : i + 6 + len(analysis.velocities)])
         
     return pd.concat(data)
-    # return process_data(flutter_summaries)
 
 
-def process_df(df):
-    pass
+def read_results(case_files, theta_range):
+    
+    if len(theta_range) != len(case_files):
+        raise Exception("Collections should be of same size.")
+
+    df_results = []
+    
+    for i, fn in enumerate(case_files):
+        print("Reading... {}".format(fn))
+        df_data = read_f06(fn)
+        df_results.append(
+            pd.concat(
+                { theta_range[i]: df_data },
+                names=['THETA']
+            )
+        )
+        
+    return pd.concat(df_results)
+
+
+def get_critical_points(df: DataFrame, epsilon=1e-3):
+
+    indexes = list(df.index.names)
+    [ indexes.remove(label) for label in ["INDEX", "POINT"] ]
+    
+    critic_idx = df.loc[df.DAMPING >= epsilon, 'VELOCITY'].groupby(
+        indexes).apply(
+            lambda df: df.idxmin())
+    
+    critic_modes_idx = critic_idx.apply(lambda i: i[:-1])
+    
+    # critic = [df_.loc[idx] for idx in points.to_list()]    
+    
+    interp_data = []
+    
+    for idx in critic_modes_idx.to_list():
+        
+        df_s = df.loc[idx]
+        
+        positive_damp_idx = df_s.DAMPING >= epsilon
+        if not any(positive_damp_idx):
+            continue
+            
+        # first row after flutter (damp >= 0)
+        upper_row = df_s.loc[positive_damp_idx].iloc[0,:]
+        
+        # row before the flutter condition
+        if upper_row.name > 0:
+            lower_row = df_s.loc[upper_row.name-1,:] 
+        else:
+            lower_row = df_s.loc[upper_row.name,:] 
+        
+        # new row with damp = 0 to be interpolated
+        new_row = pd.Series([None, None, None, .0, None, None, None, None],
+                            index=upper_row.index, name=-1)
+        
+        # concat rows and interpolate values
+        interp_df = pd.concat([lower_row, new_row, upper_row], axis=1).T.interpolate()
+        
+        # get interpolated row
+        interp_row = interp_df.loc[-1]
+        
+        # create a new DataFrame
+        multi_idx = pd.MultiIndex.from_tuples([idx], names=df.index.names[:-1])
+        refact_df = pd.DataFrame([interp_row.to_numpy()],
+                                 index=multi_idx,
+                                 columns=df.columns)
+
+        interp_data.append(refact_df)
+    
+    if len(interp_data) == 0:
+        print("WARNING: No critial roots were found... check episilon value or analysis parameters.")
+        return pd.DataFrame([])
+    return pd.concat(interp_data)
+
+
+def plot_vf_vg(df, only_critic=False, epsilon=1e-3):
+    fig, axs = plt.subplots(2)
+    
+    for point, df in df.groupby(level="POINT"):
+
+        if only_critic and not any(df.DAMPING >= epsilon):
+            continue
+
+        axs[0].plot(df.VELOCITY, df.FREQUENCY, label="Mode {}".format(int(point)), markevery=4)
+        axs[1].plot(df.VELOCITY, df.DAMPING, markevery=4)
+    
+    axs[0].grid()
+    axs[1].grid()
+
+    fig.legend()
+
+    return fig
+
+
+# Old code \/
 
 def process_data(flutter_summaries):
     

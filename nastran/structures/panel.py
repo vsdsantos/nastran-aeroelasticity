@@ -23,6 +23,17 @@ class StructuralPlate(RectangularPlate):
     def __repr__(self) -> str:
         return self.bdf.get_bdf_stats()
 
+    def limit_nodes(self, mode="a"): 
+        if mode == "a":
+            return [
+                self.chordwise_nodes[0],
+                self.chordwise_nodes[-1],
+                self.spanwise_nodes[0][1:-1],
+                self.spanwise_nodes[-1][1:-1],
+            ]
+        else:
+            raise Exception("Not implemented")
+
     @property
     def corner_nodes(self):
         n1 = self.firstNid

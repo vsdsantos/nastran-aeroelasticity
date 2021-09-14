@@ -206,54 +206,6 @@ def postprocess_analysis(analysis, theta_range, case_files, D11):
 
     return df
 
-def get_critical_points(df_):
-    epsilon = 0.001
-    critic_idx = df_.loc[df_.DAMPING >= epsilon, 'VELOCITY'].groupby(
-        ['THETA','SUBCASE', 'MACH NUMBER']).apply(
-            lambda df: df.idxmin())
-    
-    critic_modes_idx = critic_idx.apply(lambda i: i[:-1])
-    
-    # critic = [df_.loc[idx] for idx in points.to_list()]    
-    
-    interp_data = []
-    
-    for idx in critic_modes_idx.to_list():
-        
-        df_s = df_.loc[idx]
-        
-        
-        positive_damp_idx = df_s.DAMPING >= epsilon
-        if not any(positive_damp_idx):
-            continue
-            
-        # first row after flutter (damp >= 0)
-        upper_row = df_s.loc[positive_damp_idx].iloc[0,:]
-        
-        # row before the flutter condition
-        if upper_row.name > 0:
-            lower_row = df_s.loc[upper_row.name-1,:] 
-        else:
-            lower_row = df_s.loc[upper_row.name,:] 
-        
-        # new row with damp = 0 to be interpolated
-        new_row = pd.Series([None, None, None, .0, None, None, None, None],
-                            index=upper_row.index, name=-1)
-        
-        # concat rows and interpolate values
-        interp_df = pd.concat([lower_row, new_row, upper_row], axis=1).T.interpolate()
-        
-        # get interpolated row
-        interp_row = interp_df.loc[-1]
-        
-        # create a new DataFrame
-        multi_idx = pd.MultiIndex.from_tuples([idx], names=df_.index.names[:-1])
-        refact_df = pd.DataFrame([interp_row.to_numpy()],
-                                 index=multi_idx,
-                                 columns=df_.columns)
-        interp_data.append(refact_df)
-        
-    return pd.concat(interp_data)
 
 
 def print_max_min(df):
@@ -377,7 +329,7 @@ flutter_df.groupby(level='MACH NUMBER').apply(print_max_min)
 
 #%% Plot each
 
-thetas_list = 'flutter_df.index.get_level_values('THETA')'.unique().to_list()
+thetas_list = flutter_df.index.get_level_values('THETA').unique().to_list()
 
 for m in machs:
     plot_flutter(flutter_df, cases, m, thetas_list)
@@ -513,18 +465,16 @@ def plot_double(df_, cases, thetas):
 plot_double(flutter_df, cases, thetas_list)
 
 #%%
-def plot_f_g(df, theta, subcase, only_critic=True):
+def plot_vf_vg(df, theta, subcase, only_critic=True):
     df_list = list(df.xs((theta,subcase) , level=['THETA', 'SUBCASE']).groupby(level=['POINT']))
     fig, axs = plt.subplots(2)
     
     for point, df in df_list:
-        lamb = df.LAMBDA
-        freq = df.FREQUENCY
-        damp = df.DAMPING
-        if only_critic and not any(damp > .001):
+
+        if only_critic and not any(df.DAMPING > .001):
             continue
-        axs[0].plot(lamb, freq, label="Mode {}".format(int(point)), markevery=4)
-        axs[1].plot(lamb, damp, markevery=4)
+        axs[0].plot(df.VELOCITY, df.FREQUENCY, label="Mode {}".format(int(point)), markevery=4)
+        axs[1].plot(df.VELOCITY, df.DAMPING, markevery=4)
     
     axs[0].grid()
     axs[1].grid()
