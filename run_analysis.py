@@ -116,20 +116,13 @@ from nastran.aero.post import read_f06
 df = read_f06("pflutter.f06")
 
 #%%
-from nastran.aero.post import read_results
+from nastran.aero.post import parse_panel_flutter_results
 
-
-def calc_adm_dyn_pressure(vel, mach, D, analysis):
-    vref = analysis.subcases[1].vref
-    a = analysis.subcases[1].ref_chord
-    rho = analysis.subcases[1].ref_rho
-    return (rho * (vel * vref) ** 2) * (a ** 3) / (np.sqrt(mach ** 2 - 1) * D)
-
-df = read_results(["pflutter.f06"], [45])
+df = parse_panel_flutter_results(["pflutter.f06"], [45])
 
 #%%
-from nastran.aero.post import get_critical_points
-critic_df = get_critical_points(df)
+from nastran.aero.post import get_critical_roots
+critic_df = get_critical_roots(df)
 
 #%%
 

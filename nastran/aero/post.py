@@ -143,9 +143,9 @@ def read_f06(filename):
     return pd.concat(data)
 
 
-def read_results(case_files, theta_range):
+def read_and_concat_f06s(case_files, labels, label_name="THETA"):
     
-    if len(theta_range) != len(case_files):
+    if len(labels) != len(case_files):
         raise Exception("Collections should be of same size.")
 
     df_results = []
@@ -155,22 +155,40 @@ def read_results(case_files, theta_range):
         df_data = read_f06(fn)
         df_results.append(
             pd.concat(
-                { theta_range[i]: df_data },
-                names=['THETA']
+                { labels[i]: df_data },
+                names=[label_name]
             )
         )
         
     return pd.concat(df_results)
 
 
-def get_critical_points(df: DataFrame, epsilon=1e-3):
+def calc_sawyer_dyn_pressure(vel, mach, D, vref, a, rho):
+    return (rho * (vel * vref) ** 2) * (a ** 3) / (np.sqrt(mach ** 2 - 1) * D)
+
+
+def parse_panel_flutter_results(analysis, case_files, theta_range, D11):
+    
+    df = read_and_concat_f06s(case_files, theta_range)
+    
+    # print(df.info())
+        
+    df['DYNPRSS'] = calc_sawyer_dyn_pressure(df.VELOCITY,
+                                         df.index.get_level_values('MACH NUMBER'),
+                                         [D11]*len(df),
+                                         analysis.subcases[1].vref,
+                                         analysis.subcases[1].ref_chord,
+                                         analysis.subcases[1].ref_rho)
+
+    return df
+
+
+def get_critical_roots(df: DataFrame, epsilon=1e-3):
 
     indexes = list(df.index.names)
     [ indexes.remove(label) for label in ["INDEX", "POINT"] ]
     
-    critic_idx = df.loc[df.DAMPING >= epsilon, 'VELOCITY'].groupby(
-        indexes).apply(
-            lambda df: df.idxmin())
+    critic_idx = df.loc[df.DAMPING >= -epsilon, 'VELOCITY'].groupby(indexes).apply(lambda df: df.idxmin())
     
     critic_modes_idx = critic_idx.apply(lambda i: i[:-1])
     
@@ -182,7 +200,7 @@ def get_critical_points(df: DataFrame, epsilon=1e-3):
         
         df_s = df.loc[idx]
         
-        positive_damp_idx = df_s.DAMPING >= epsilon
+        positive_damp_idx = df_s.DAMPING >= -epsilon
         if not any(positive_damp_idx):
             continue
             
@@ -240,156 +258,156 @@ def plot_vf_vg(df, only_critic=False, epsilon=1e-3):
 
 # Old code \/
 
-def process_data(flutter_summaries):
+# def process_data(flutter_summaries):
     
-    modes = []
-    flutter_conditions = []
-    critical_modes = []
+#     modes = []
+#     flutter_conditions = []
+#     critical_modes = []
     
-    for summary in flutter_summaries:
-        raw_data = []
-        data = {}
+#     for summary in flutter_summaries:
+#         raw_data = []
+#         data = {}
 
-        # pop information from the 2 first lines
+#         # pop information from the 2 first lines
 
-        # ignore 2 blank lines and data header, split data, and parse
+#         # ignore 2 blank lines and data header, split data, and parse
     
-        if any(map(lambda v: v > 0, data['DAMPING'])):
-            idx = np.where(data['DAMPING'] > 0)[0][0] + 1
-            critic_vel = np.interp(0, data['DAMPING'][:idx], data['VELOCITY'][:idx])
-            critic_freq = np.interp(critic_vel, data['VELOCITY'][:idx], data['FREQUENCY'][:idx])
-            if type(analysis) is PanelFlutterSubcase:
-                D = analysis.plate_stiffness
-                vref = analysis.vref
-                a = analysis.ref_chord
-                rho = analysis.ref_rho
-                lamb_critc = (rho * (critic_vel * vref) ** 2) * (a ** 3) / (
-                        np.sqrt(data['MACH NUMBER'] ** 2 - 1) * D)
-            else:
-                lamb_critc = None
-            critic_data = {
-                'VELOCITY': critic_vel,
-                'FREQUENCY': critic_freq,
-                'LAMBDA': lamb_critc,
-                'MODE': data['MODE'],
-                'MACH': data['MACH NUMBER'],
-                'DENSITY RATIO': data['DENSITY RATIO']
-            }
+#         if any(map(lambda v: v > 0, data['DAMPING'])):
+#             idx = np.where(data['DAMPING'] > 0)[0][0] + 1
+#             critic_vel = np.interp(0, data['DAMPING'][:idx], data['VELOCITY'][:idx])
+#             critic_freq = np.interp(critic_vel, data['VELOCITY'][:idx], data['FREQUENCY'][:idx])
+#             if type(analysis) is PanelFlutterSubcase:
+#                 D = analysis.plate_stiffness
+#                 vref = analysis.vref
+#                 a = analysis.ref_chord
+#                 rho = analysis.ref_rho
+#                 lamb_critc = (rho * (critic_vel * vref) ** 2) * (a ** 3) / (
+#                         np.sqrt(data['MACH NUMBER'] ** 2 - 1) * D)
+#             else:
+#                 lamb_critc = None
+#             critic_data = {
+#                 'VELOCITY': critic_vel,
+#                 'FREQUENCY': critic_freq,
+#                 'LAMBDA': lamb_critc,
+#                 'MODE': data['MODE'],
+#                 'MACH': data['MACH NUMBER'],
+#                 'DENSITY RATIO': data['DENSITY RATIO']
+#             }
     
-            flutter_conditions.append(critic_data)
-            critical_modes.append(data)
-        modes.append(data)
+#             flutter_conditions.append(critic_data)
+#             critical_modes.append(data)
+#         modes.append(data)
         
-    return modes, critical_modes, flutter_conditions
+#     return modes, critical_modes, flutter_conditions
 
-def filter_modes_by_list(modes, mode_list):
-    return list(filter(lambda m: m['MODE'] in mode_list, modes))
-
-
-def plot_figure(modes, x_key, y_key, labels, title, xlabel='x', ylabel='y', marker='.-'):
-    figsize = (9, 5)
-    fig = plt.figure(figsize=figsize, constrained_layout=True)
-    ax = fig.gca()
-    for mode, label in zip(list(modes), labels):
-        ax.plot(mode[x_key], mode[y_key], marker, label=label)
-    ax.set_xlabel(xlabel)
-    ax.set_ylabel(ylabel)
-    ax.set_title(title, fontsize=16)
-    ax.grid()
-    ax.legend(bbox_to_anchor=(1.2, 1), fancybox=True, shadow=True)
-    plt.show()
+# def filter_modes_by_list(modes, mode_list):
+#     return list(filter(lambda m: m['MODE'] in mode_list, modes))
 
 
-def plot_vg(modes, labels, title):
-    plot_figure(modes, 'VELOCITY', 'DAMPING', labels, title, 'Velocity (m/s)', 'Damping')
+# def plot_figure(modes, x_key, y_key, labels, title, xlabel='x', ylabel='y', marker='.-'):
+#     figsize = (9, 5)
+#     fig = plt.figure(figsize=figsize, constrained_layout=True)
+#     ax = fig.gca()
+#     for mode, label in zip(list(modes), labels):
+#         ax.plot(mode[x_key], mode[y_key], marker, label=label)
+#     ax.set_xlabel(xlabel)
+#     ax.set_ylabel(ylabel)
+#     ax.set_title(title, fontsize=16)
+#     ax.grid()
+#     ax.legend(bbox_to_anchor=(1.2, 1), fancybox=True, shadow=True)
+#     plt.show()
 
 
-def plot_vf(modes, labels, title):
-    plot_figure(modes, 'VELOCITY', 'FREQUENCY', labels, title, 'Velocity (m/s)', 'Frequency (Hz)')
+# def plot_vg(modes, labels, title):
+#     plot_figure(modes, 'VELOCITY', 'DAMPING', labels, title, 'Velocity (m/s)', 'Damping')
 
 
-def plot_complex(modes, labels, title):
-    plot_figure(modes, 'REALEIGVAL', 'IMAGEIGVAL', labels, title, 'Real', 'Imag')
+# def plot_vf(modes, labels, title):
+#     plot_figure(modes, 'VELOCITY', 'FREQUENCY', labels, title, 'Velocity (m/s)', 'Frequency (Hz)')
 
 
-def filter_modes(modes, mach, dr):
-    return filter(lambda m: m['MACH NUMBER'] == mach and m['DENSITY RATIO'] == dr, modes)
+# def plot_complex(modes, labels, title):
+#     plot_figure(modes, 'REALEIGVAL', 'IMAGEIGVAL', labels, title, 'Real', 'Imag')
 
 
-def plot_flutter_data(modes, analysis: FlutterSubcase):
-    for mach in analysis.machs:
-        for dens_ratio in analysis.densities_ratio:
-            modes = list(filter_modes(modes, mach, dens_ratio))
-            labels = ['Mode {}'.format(mode['MODE']) for mode in modes]
-
-            plot_vg(modes, labels, 'V-g, Mach {}, AoA {}°'.format(mach, 0))
-            plot_vf(modes, labels, 'V-f, Mach {}, AoA {}°'.format(mach, 0))
-            plot_complex(modes, labels,
-                         'Complex Eigenvalues, Mach {}, AoA {}°'.format(mach, 0))
-    plt.show()
+# def filter_modes(modes, mach, dr):
+#     return filter(lambda m: m['MACH NUMBER'] == mach and m['DENSITY RATIO'] == dr, modes)
 
 
-def plot_critical_flutter_data(modes):
-    labels = ['Mode {}; Mach {}'.format(mode['MODE'], mode['MACH NUMBER']) for mode in modes]
+# def plot_flutter_data(modes, analysis: FlutterSubcase):
+#     for mach in analysis.machs:
+#         for dens_ratio in analysis.densities_ratio:
+#             modes = list(filter_modes(modes, mach, dens_ratio))
+#             labels = ['Mode {}'.format(mode['MODE']) for mode in modes]
 
-    plot_vg(modes, labels, 'V-g')
-    plot_vf(modes, labels, 'V-f')
-    # plot_complex(modes, labels, 'Autovalores Complexos')
-    plt.show()
-
-
-def export_flutter_data(modes, critical_modes, flutter_data, analysis, filename):
-    workbook = xlsxwriter.Workbook(filename)
-
-    worksheet = workbook.add_worksheet('Flutter Resume')
-
-    for i, key in enumerate(flutter_data[0].keys()):
-        worksheet.write(1, i + 1, key)
-
-    for i, data in enumerate(flutter_data):
-        for j, (key, value) in enumerate(data.items()):
-            worksheet.write(i + 2, j + 1, value)
-
-    worksheet = workbook.add_worksheet('Critical Modes')
-
-    for i, mode in enumerate(critical_modes):
-        for j, key in enumerate(FLUTTER_DATA_KEYS):
-            worksheet.write(1 + i * len(mode[key]), j + 1, FLUTTER_DATA_KEYS[key])
-            worksheet.write_column(2 + i * len(mode[key]), j + 1, mode[key])
-
-    for mach in analysis.machs:
-        m_modes = filter(lambda m: m['MACH NUMBER'] == mach, modes)
-        for mode in m_modes:
-            worksheet = workbook.add_worksheet('MODE {}; M {}; DR {}'.format(
-                mode['MODE'], mode['MACH NUMBER'], mode['DENSITY RATIO']))
-
-            for j, key in enumerate(FLUTTER_INFO_KEYS):
-                worksheet.write('B{}'.format(2 + j), key)
-                worksheet.write('C{}'.format(2 + j), mode[key])
-            # worksheet.write('A{}'.format(3 + len(FLUTTER_DATA_KEYS)), '')
-            # worksheet.write('B{}'.format(3 + len(FLUTTER_DATA_KEYS)), '')
-
-            for j, key in enumerate(FLUTTER_DATA_KEYS):
-                worksheet.write(1, j + 4, FLUTTER_DATA_KEYS[key])
-                worksheet.write_column(2, j + 4, mode[key])
-
-    workbook.close()
+#             plot_vg(modes, labels, 'V-g, Mach {}, AoA {}°'.format(mach, 0))
+#             plot_vf(modes, labels, 'V-f, Mach {}, AoA {}°'.format(mach, 0))
+#             plot_complex(modes, labels,
+#                          'Complex Eigenvalues, Mach {}, AoA {}°'.format(mach, 0))
+#     plt.show()
 
 
-def panel_flutter_analysis(analysis, output_file):
-    for key, subcase in analysis.subcases.items():
-        print('SUBCASE {}'.format(key))
-        modes, critical_modes, flutter = read_f06(output_file.replace('.bdf', '.f06'), subcase)
-        searched_modes = list(filter(lambda m: m['MODE'] <= subcase.n_modes-10, modes))
-        plot_flutter_data(searched_modes, subcase)
-        searched_crit_modes = list(filter(lambda m: m['MODE'] <= subcase.n_modes, critical_modes))
-        if len(searched_crit_modes) > 0:
-            # plot_critical_flutter_data(searched_crit_modes)
-            for flut in flutter:
-                print('Flutter found on MODE {}'.format(flut['MODE']))
-                print('\tMACH \t{}'.format(flut['MACH']))
-                print('\tVELOCITY \t{}'.format(flut['VELOCITY']))
-                print('\tLAMBDA \t{}'.format(flut['LAMBDA']))
-        else:
-            print('No flutter encountered in subcase {}.'.format(key))
-        # export_flutter_data(modes, critical_modes, flutter, subcase[1], os.path.join(base_path, 'output-model.xlsx'))
+# def plot_critical_flutter_data(modes):
+#     labels = ['Mode {}; Mach {}'.format(mode['MODE'], mode['MACH NUMBER']) for mode in modes]
+
+#     plot_vg(modes, labels, 'V-g')
+#     plot_vf(modes, labels, 'V-f')
+#     # plot_complex(modes, labels, 'Autovalores Complexos')
+#     plt.show()
+
+
+# def export_flutter_data(modes, critical_modes, flutter_data, analysis, filename):
+#     workbook = xlsxwriter.Workbook(filename)
+
+#     worksheet = workbook.add_worksheet('Flutter Resume')
+
+#     for i, key in enumerate(flutter_data[0].keys()):
+#         worksheet.write(1, i + 1, key)
+
+#     for i, data in enumerate(flutter_data):
+#         for j, (key, value) in enumerate(data.items()):
+#             worksheet.write(i + 2, j + 1, value)
+
+#     worksheet = workbook.add_worksheet('Critical Modes')
+
+#     for i, mode in enumerate(critical_modes):
+#         for j, key in enumerate(FLUTTER_DATA_KEYS):
+#             worksheet.write(1 + i * len(mode[key]), j + 1, FLUTTER_DATA_KEYS[key])
+#             worksheet.write_column(2 + i * len(mode[key]), j + 1, mode[key])
+
+#     for mach in analysis.machs:
+#         m_modes = filter(lambda m: m['MACH NUMBER'] == mach, modes)
+#         for mode in m_modes:
+#             worksheet = workbook.add_worksheet('MODE {}; M {}; DR {}'.format(
+#                 mode['MODE'], mode['MACH NUMBER'], mode['DENSITY RATIO']))
+
+#             for j, key in enumerate(FLUTTER_INFO_KEYS):
+#                 worksheet.write('B{}'.format(2 + j), key)
+#                 worksheet.write('C{}'.format(2 + j), mode[key])
+#             # worksheet.write('A{}'.format(3 + len(FLUTTER_DATA_KEYS)), '')
+#             # worksheet.write('B{}'.format(3 + len(FLUTTER_DATA_KEYS)), '')
+
+#             for j, key in enumerate(FLUTTER_DATA_KEYS):
+#                 worksheet.write(1, j + 4, FLUTTER_DATA_KEYS[key])
+#                 worksheet.write_column(2, j + 4, mode[key])
+
+#     workbook.close()
+
+
+# def panel_flutter_analysis(analysis, output_file):
+#     for key, subcase in analysis.subcases.items():
+#         print('SUBCASE {}'.format(key))
+#         modes, critical_modes, flutter = read_f06(output_file.replace('.bdf', '.f06'), subcase)
+#         searched_modes = list(filter(lambda m: m['MODE'] <= subcase.n_modes-10, modes))
+#         plot_flutter_data(searched_modes, subcase)
+#         searched_crit_modes = list(filter(lambda m: m['MODE'] <= subcase.n_modes, critical_modes))
+#         if len(searched_crit_modes) > 0:
+#             # plot_critical_flutter_data(searched_crit_modes)
+#             for flut in flutter:
+#                 print('Flutter found on MODE {}'.format(flut['MODE']))
+#                 print('\tMACH \t{}'.format(flut['MACH']))
+#                 print('\tVELOCITY \t{}'.format(flut['VELOCITY']))
+#                 print('\tLAMBDA \t{}'.format(flut['LAMBDA']))
+#         else:
+#             print('No flutter encountered in subcase {}.'.format(key))
+#         # export_flutter_data(modes, critical_modes, flutter, subcase[1], os.path.join(base_path, 'output-model.xlsx'))
