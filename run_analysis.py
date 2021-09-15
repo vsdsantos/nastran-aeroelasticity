@@ -116,9 +116,9 @@ from nastran.aero.post import read_f06
 df = read_f06("pflutter.f06")
 
 #%%
-from nastran.aero.post import parse_panel_flutter_results
+from nastran.aero.post import read_and_concat_f06s
 
-df = parse_panel_flutter_results(["pflutter.f06"], [45])
+df = read_and_concat_f06s(["pflutter.f06"], [45])
 
 #%%
 from nastran.aero.post import get_critical_roots

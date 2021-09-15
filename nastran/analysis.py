@@ -49,7 +49,7 @@ class AnalysisModel(ABC):
     
     def __init__(self, model:BDF=None,
                  global_case=None,
-                 subcases:Dict[int,Subcase]={},
+                 subcases:Dict[int,Subcase]=None,
                  params=None,
                  diags=None,
                  sol=None,
@@ -57,7 +57,7 @@ class AnalysisModel(ABC):
         self.model = model if model is not None else BDF(debug=False)
         self.idutil = IdUtility(self.model)
         self.global_case = global_case if global_case is not None else CaseControl()
-        self.subcases = subcases
+        self.subcases = subcases if subcases is not None else {}
         self.params = params
         self.diags = diags
         self.sol = sol

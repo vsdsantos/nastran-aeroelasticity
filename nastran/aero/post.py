@@ -43,7 +43,7 @@ def parse_summary_header(header):
     label = res.group('label').strip()
     subcase = res.group('subcase').replace('SUBCASE', '').strip()
     
-    info = dict()
+    info = {}
     
     info['SUBCASE'] = int(subcase)
     info['LABEL'] = label
@@ -79,7 +79,7 @@ def parse_content(content):
 SKIP_LINE_SET = {"*** USER INFORMATION MESSAGE"}
 
 def check_skip_lines(line):
-    return any([ (k in line) for k in SKIP_LINE_SET])
+    return any(map(lambda k: k in line, SKIP_LINE_SET))
 
 def parse_to_df(parsed_data, info, last_df):
     df = pd.DataFrame(parsed_data, 
@@ -186,7 +186,8 @@ def parse_panel_flutter_results(analysis, case_files, theta_range, D11):
 def get_critical_roots(df: DataFrame, epsilon=1e-3):
 
     indexes = list(df.index.names)
-    [ indexes.remove(label) for label in ["INDEX", "POINT"] ]
+    for label in ["INDEX", "POINT"]:
+        indexes.remove(label)
     
     critic_idx = df.loc[df.DAMPING >= -epsilon, 'VELOCITY'].groupby(indexes).apply(lambda df: df.idxmin())
     
