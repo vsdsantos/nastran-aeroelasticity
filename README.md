@@ -18,6 +18,10 @@ An exemple of utilization is on the `run_analysis.py` script.
 First it generates the plate structure and required properties.
 
 ```python
+import numpy as np
+from nastran.structures.panel import LaminatedStructuralPlate
+from nastran.structures.composite import OrthotropicMaterial
+
 a, b = 100, 100
 
 p1 = np.array([0, 0, 0])
@@ -35,6 +39,8 @@ lam = LaminatedStructuralPlate.create_sawyer_plate(p1, p2, p3, p4, nspan, nchord
 Then you can add the analysis properties for SOL 145 Aeroelastic Dynamic Flutter. The PanelFlutterPistonAnalysisModel class is a wrapper of the pyNastran's BDF class.
 
 ```python
+from nastran.aero.analysis.panel_flutter import PanelFlutterPistonAnalysisModel
+
 config = {
     'vref': 1000.,                      # used to calculate the non-dimensional dynamic pressure must be the same in control case (mm/s in the case)
     'ref_rho': 1.225e-12,               # air density reference (ton/mm^3 in the case)
@@ -65,8 +71,9 @@ analysis.set_global_case_from_dict(config)
 
 You can add "super" panels, that is just a wrapper of CAEROx elements that make one element.
 
-
 ```python
+from nastran.aero.superpanels import SuperAeroPanel5
+
 spanel_p = SuperAeroPanel5(1, p1, p2, p3, p4, nchord, nspan, theory='VANDYKE')
 analysis.add_superpanel(spanel_p)
 ```
