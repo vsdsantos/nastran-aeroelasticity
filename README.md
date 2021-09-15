@@ -3,7 +3,7 @@
 
 This project is intended to analyse the Supersonic Panel Flutter using the NASTRAN software.
 
-The project uses the pyNastran, the Femap's COM interface and the python scientific packeges (i.e scipy, numpy, matplotlib).
+The project uses the pyNastran and the python scientific packeges (i.e scipy, numpy, matplotlib).
 
 Currently, the focus is to use the aerodynamic Piston Theory, available on NASTRAN with the CAERO5 element.
 But it can be extended to use with any aerodynamic element.
@@ -11,72 +11,116 @@ But it can be extended to use with any aerodynamic element.
 This software is result of a research project of the Department of Mechanical Engineering
 at the Federal University of Minas Gerais (UFMG).
 
-## Instalation
-
-To use the Femap interface you must `pip install pywin32` and run the script
-```python3
-import sys
-from win32com.client import makepy
-sys.argv = ["makepy", "-o PyFemap.py", r"{YOUR FEMAP INSTALATION DIRECTORY}\femap.tlb"]
-makepy.main()
-```
-source: https://community.sw.siemens.com/s/article/writing-the-femap-api-in-python
-
 ## Use
 
-An exemple of utilization is on the `aero5mesh.py` script.
+An exemple of utilization is on the `run_analysis.py` script.
 
-First it exports some BDF file from Femap. The Femap instance must be running,
-and some analysis already made (e.g. Normal Mode Analysis).
-
-```python
-femap = Femap()
-femap.export_bdf_model(input_file)
-```
-Then you can import he file to the analysis object. The AeroelasticAnalysis class is a wrapper of the pyNastran's BDF class.
+First it generates the plate structure and required properties.
 
 ```python
-analysis = AeroelasticAnalysis()
-analysis.import_from_bdf(input_file)
+a, b = 100, 100
+
+p1 = np.array([0, 0, 0])
+p2 = p1 + np.array([a, 0, 0])
+p3 = p1 + np.array([a, b, 0])
+p4 = p1 + np.array([0, b, 0])
+
+cfrp = OrthotropicMaterial(1, 54000., 18000., 0.3, 7200., 2.6e-9)
+
+nchord, nspan = 10, 10
+
+lam = LaminatedStructuralPlate.create_sawyer_plate(p1, p2, p3, p4, nspan, nchord, 1, 45, 6, 0.1, cfrp)
 ```
-You can import the main parameter of analysis from a YAML file with this.
+
+Then you can add the analysis properties for SOL 145 Aeroelastic Dynamic Flutter. The PanelFlutterPistonAnalysisModel class is a wrapper of the pyNastran's BDF class.
 
 ```python
-analysis.load_analysis_from_yaml(analysis_file)
+config = {
+    'vref': 1000.,                      # used to calculate the non-dimensional dynamic pressure must be the same in control case (mm/s in the case)
+    'ref_rho': 1.225e-12,               # air density reference (ton/mm^3 in the case)
+    'ref_chord': 300.,                  # reference chord (mm in the case)
+    'n_modes': 15,                      # number searched modes in modal analysis
+    'frequency_limits': 
+        [.0, 3000.],                    # the range of frequency (Hz) in modal analysis
+    'method': 'PK',                     # the method for solving flutter (it will determine the next parameters
+    'densities_ratio': [.5],            # rho/rho_ref -> 1/2 simulates the "one side flow" of the panel (? reference ?)
+    'machs': [3.5, 4.5, 5.5, 6.5],      # Mach numbers
+    'alphas': [.0, .0, .0, .0],         # AoA (°) -> 0 is more conservative (? reference ?)
+    'reduced_frequencies': 
+        [.001, .01, .1, .2, .4, .8],    # reduced frequencies (k) (check influence)
+    'velocities':                       # velocities (mm/s in the case)
+        np.linspace(10, 100, 10)*1000,
+}
+
+params =  {
+    'VREF': 1000.0,
+    'COUPMASS': 1,
+    'LMODES': 20,
+    # 'POST': [-1]
+}
+
+analysis = PanelFlutterPistonAnalysisModel(lam.bdf, params=params)
+analysis.set_global_case_from_dict(config)
 ```
-
-The file must follow this template.
-
-TODO: Add template.
 
 You can add "super" panels, that is just a wrapper of CAEROx elements that make one element.
-These panels properties can be setted from Femap interface.
+
 
 ```python
-spanel = SuperAeroPanel5()
-spanel.init_from_femap(femap)
-analysis.add_superpanel(spanel)
+spanel_p = SuperAeroPanel5(1, p1, p2, p3, p4, nchord, nspan, theory='VANDYKE')
+analysis.add_superpanel(spanel_p)
 ```
 
-After adding all panels and properties of the analysis you can write all properties to the BDF instance and export the BDF file.
+You can set multiple subcases for example varing the boundary conditions.
 
 ```python
-analysis.write_cards(1)
-analysis.export_to_bdf(output_file)
+cases_labels = {
+    1: "Loaded edges SS & unloaded edges SS",
+    2: "Loaded edges SS & unloaded edges CP",
+    3: "Loaded edges SS & unloaded edges SS/CP",
+}
+
+spc_cases = {
+    1: ('123', '123', '123', '123'),             # loaded edges SS, unloaded edges SS
+    2: ('123', '123', '123456', '123456'),       # loaded edges SS, unloaded edges CP
+    3: ('123', '123', '123', '123456'),          # loaded edges SS, unloaded edges SS/CP
+}
+
+for i, spcs in spc_cases.items():
+    spc_id = analysis.idutil.get_next_sid()
+    for comp, nds in zip(list(spcs), lam.limit_nodes()):
+        if comp == '':
+            continue
+        analysis.model.add_spc1(spc_id, comp, nds, comment=cases_labels[i])
+    sub_config = {
+        'LABEL': cases_labels[i],
+        'SPC': spc_id,
+    }
+    analysis.create_subcase_from_dict(PanelFlutterSubcase, i, sub_config)
+```
+Then you must write all cards to the BDF object and export the file.
+
+```python
+analysis.write_cards()
+analysis.model.write_bdf('pflutter.bdf', enddata=True)
 ```
 
 Then you can run the analysis and post-processes.
 
 ## Outputs
 
-Some console informartion
+The postprocessing generates `DataFrame`s objects from the .f06 result files.
 
-```
-SUBCASE 1
-Flutter found on MODE 3
-	MACH 	2.0
-	VELOCITY 	770.3449586829851
-	LAMBDA 	305.3366755075875
+```py
+
+from nastran.aero.post import read_f06, get_critical_roots, plot_vf_vg
+
+df = read_f06("pflutter.f06")
+
+critic_df = get_critical_roots(df)
+
+fig = plot_vf_vg(df.xs((1,3.5))) # Subcase, Mach
+fig.show()
 
 ```
 
