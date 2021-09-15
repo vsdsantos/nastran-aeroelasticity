@@ -25,11 +25,11 @@ class PanelFlutterAnalysisModel(FlutterAnalysisModel):
     
     def __init__(self, model: BDF = None, global_case = None,
                  subcases: Dict[int, Subcase] = {},
-                 params=None, diags=None, interface=None,superpanels=[]):
+                 params=None, diags=None, interface=None,superpanels=None):
         super().__init__(model=model, global_case=global_case,
                         subcases=subcases, params=params, diags=diags,
                         interface=interface)
-        self.superpanels = superpanels
+        self.superpanels = superpanels if superpanels is not None else []
 
     def add_superpanel(self, superpanel):
         self.superpanels.append(superpanel)

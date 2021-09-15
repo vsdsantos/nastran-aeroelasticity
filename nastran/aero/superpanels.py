@@ -13,7 +13,7 @@ class SuperAeroPanel(RectangularPlate):
     It's used to simulate chordwise flexibility with aerodynamic strip theories.
     """
 
-    def __init__(self, eid, p1, p2, p3, p4, nchord, nspan, aeropanels: Dict[Any, AeroPanel]={}):
+    def __init__(self, eid, p1, p2, p3, p4, nchord, nspan, aeropanels: Dict[Any, AeroPanel]=None):
         """
         Parameters
         ----------
@@ -23,7 +23,7 @@ class SuperAeroPanel(RectangularPlate):
         self.eid = eid
         self.nchord = nchord
         self.nspan = nspan
-        self.aeropanels = aeropanels
+        self.aeropanels = aeropanels if aeropanels is not None else {}
 
 class SuperAeroPanel1(SuperAeroPanel):
     """
@@ -67,7 +67,7 @@ class SuperAeroPanel5(SuperAeroPanel):
     A superelement which holds CEARO5 elements (strips) for modeling chordwise flexiblity.
     """
 
-    def __init__(self, eid, p1, p2, p3, p4, nchord, nspan, aeropanels: Dict[int, AeroPanel5]={}, theory='PISTON'):
+    def __init__(self, eid, p1, p2, p3, p4, nchord, nspan, aeropanels: Dict[int, AeroPanel5]=None, theory='PISTON'):
         super().__init__(eid, p1, p2, p3, p4, nchord, nspan, aeropanels=aeropanels)
 
         # panel properties
