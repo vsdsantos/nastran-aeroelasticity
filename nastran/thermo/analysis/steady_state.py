@@ -7,15 +7,6 @@ from nastran.analysis import AnalysisModel, Subcase
 
 import numpy as np
 
-FMETHODS = {
-    1: 'K',
-    2: 'KE',
-    3: 'PK',
-    4: 'PKNL',
-    5: 'PKS',  # only on recent MSC.Nastran versions
-    6: 'PKNLS'  # only on recent MSC.Nastran versions
-}
-
 class ThermoSubcase(Subcase):
     """
     This class represents the requirements to the Aeroelastic Flutter Solution 145 of NASTRAN.
@@ -24,7 +15,6 @@ class ThermoSubcase(Subcase):
     def __init__(self, id, spc=None, temp=None, **args):
         super().__init__(id, spc=spc, load=None, **args)
         self.temp = temp
-
 
 
 class SteadyStateThermoAnalysisModel(AnalysisModel):
@@ -53,7 +43,7 @@ class SteadyStateThermoAnalysisModel(AnalysisModel):
 
         self.model.add_tempd(1, 0.0)
         cc.add_parameter_to_global_subcase('TEMP(INIT) = %d' % 1)
-        
+
         temp_cases = np.linspace(self.init_temp, self.max_temp, self.ni)
 
         for i, t in enumerate(temp_cases):
@@ -62,11 +52,7 @@ class SteadyStateThermoAnalysisModel(AnalysisModel):
             cc.create_new_subcase(1+i)
             cc.add_parameter_to_local_subcase(1+i, 'TEMP(LOAD) = %d' % (10+i))
             cc.add_parameter_to_local_subcase(1+i, 'NLPARM = %d' % (10+i))
-        
 
-        
-        
-    
     def write_cord2r_cards(self, superpanel: SuperAeroPanel5):
         cords = []
 
@@ -89,6 +75,3 @@ class SteadyStateThermoAnalysisModel(AnalysisModel):
                                       pxz_i)
                         )
         return cords
-
-
-        
