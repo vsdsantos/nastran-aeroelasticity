@@ -76,7 +76,7 @@ def parse_content(content):
         
     return data
 
-SKIP_LINE_SET = {"*** USER INFORMATION MESSAGE"}
+SKIP_LINE_SET = {"*** USER INFORMATION MESSAGE", "A ZERO FREQUENCY"}
 
 def check_skip_lines(line):
     return any(map(lambda k: k in line, SKIP_LINE_SET))
@@ -128,7 +128,7 @@ def read_f06(filename):
             j = i+6 # linha após as labels de dados
             while raw_lines[j][0] != '1': # primeiro char na linha final da pagina é 1
                 l = raw_lines[j]
-                if check_skip_lines(l):
+                if check_skip_lines(l) or l.strip() == '':
                     break
                 raw_content.append(l)
                 j += 1
@@ -215,7 +215,7 @@ def get_critical_roots(df: DataFrame, epsilon=1e-3):
             lower_row = df_s.loc[upper_row.name,:] 
         
         # new row with damp = 0 to be interpolated
-        new_row = pd.Series([None, None, None, .0, None, None, None, None],
+        new_row = pd.Series([None, None, None, .0, None, None, None],
                             index=upper_row.index, name=-1)
         
         # concat rows and interpolate values

@@ -4,6 +4,7 @@ from pyNastran.bdf.bdf import BDF
 
 from nastran.geometry.panels import RectangularPlate
 from nastran.structures.composite import Ply, OrthotropicMaterial, Sheet
+from pyNastran.bdf.cards.properties.shell import PSHELL
 from nastran.utils import IdUtility
 
 import numpy as np
@@ -28,8 +29,8 @@ class StructuralPlate(RectangularPlate):
             return [
                 self.chordwise_nodes[0],
                 self.chordwise_nodes[-1],
-                self.spanwise_nodes[0][1:-1],
-                self.spanwise_nodes[-1][1:-1],
+                self.spanwise_nodes[0],
+                self.spanwise_nodes[-1],
             ]
         raise Exception("Not implemented")
 
@@ -108,8 +109,27 @@ class StructuralPlate(RectangularPlate):
         self._generate_grid()
         self._generate_elements()
         
-        
 
+class IsotropicPlate(StructuralPlate):
+    
+    def __init__(self, p1, p2, p3, p4, nspan, nchord, prop, mat, **args) -> None:
+        super().__init__(p1, p2, p3, p4, nspan, nchord, prop.pid, **args)
+        self.prop = prop
+        self.mat = mat
+
+    def _generate_material(self) -> None:
+        self.bdf._add_structural_material_object(self.mat.to_mat1())
+        
+    def _generate_property(self) -> None:
+        self.bdf.properties[self.pid] = self.prop
+
+    @classmethod
+    def create_plate(cls, p1, p2, p3, p4, nspan, nchord, pid, thick, mat):
+        shell = PSHELL(pid, mat.mid, thick, mat.mid)
+        plate = IsotropicPlate(p1, p2, p3, p4, nspan, nchord, shell, mat)
+        plate.generate_mesh()
+        return plate
+    
 class LaminatedStructuralPlate(StructuralPlate):
 
     def __init__(self, p1, p2, p3, p4, nspan, nchord, ply: Ply, **args) -> None:
@@ -119,7 +139,10 @@ class LaminatedStructuralPlate(StructuralPlate):
     def _generate_material(self) -> None:
         mids = list(set(self.ply.mids)) # unique
         for mid in mids:
-            self.bdf.materials[mid] = self.ply.get_mat(mid).to_mat8()
+            mat = self.ply.get_mat(mid)
+            self.bdf._add_structural_material_object(mat.to_mat8())
+            # if mat.alpha1 or mat.alpha2:
+                # self.bdf._add_thermal_material_object(mat.to_mat5())
 
     def _generate_property(self) -> None:
         self.bdf.properties[self.pid] = self.ply.to_pcomp()
