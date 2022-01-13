@@ -1,4 +1,4 @@
-from nastran.post.flutter import parse_flutter_page
+from nastran.post.flutter import parse_flutter_page, FlutterF06Page
 
 PAGE_PARSING_FUNCTIONS = {
     'flutter': parse_flutter_page,
@@ -6,6 +6,19 @@ PAGE_PARSING_FUNCTIONS = {
 }
 
 FLUTTER_CHECK_LINE = 3
+
+
+class F06Results:
+
+    def __init__(self, pages=None):
+        self.pages = pages
+
+    def __repr__(self):
+        return 'F06 Results with {} pages.'.format(len(self.pages))
+
+    @property
+    def flutter(self):
+        return list(filter(lambda p: isinstance(p, FlutterF06Page), self.pages))
 
 
 def read_f06(filename: str):
@@ -23,21 +36,13 @@ def read_f06(filename: str):
 
     return F06Results(pages)
 
-class F06Results:
-
-    def __init__(self, pages=None):
-        self.pages = pages
-
-    @property
-    def flutter(self):
-        return list(filter(lambda p: p.__class__.__name__ == 'FlutterF06Page', self.pages))
-
 
 def _check_page_type(lines):
     if len(lines)-1 >= FLUTTER_CHECK_LINE and 'FLUTTER  SUMMARY' in lines[FLUTTER_CHECK_LINE]:
         return 'flutter'
     else:
         return 'text'
+
 
 def _group_lines_by_page(lines):
     groups = []

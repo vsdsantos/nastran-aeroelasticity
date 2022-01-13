@@ -77,6 +77,7 @@ def join_flutter_pages(pages):
 
     return new_pages
 
+
 def flutter_pages_to_df(pages):
     data = []
 
@@ -87,6 +88,7 @@ def flutter_pages_to_df(pages):
         data.append(df)
 
     return pd.concat(data)
+
 
 def parse_flutter_page(lines):
 
@@ -105,9 +107,9 @@ def parse_flutter_page(lines):
     return FlutterF06Page(df, info)
 
 
-
 def calc_sawyer_dyn_pressure(vel, mach, D, vref, a, rho):
     return (rho * (vel * vref) ** 2) * (a ** 3) / (np.sqrt(mach ** 2 - 1) * D)
+
 
 def parse_panel_flutter_results(analysis, case_files, theta_range, D11):
 
@@ -123,6 +125,7 @@ def parse_panel_flutter_results(analysis, case_files, theta_range, D11):
                                          analysis.subcases[1].ref_rho)
 
     return df
+
 
 def get_critical_roots(df: DataFrame, epsilon=1e-9):
 
@@ -178,6 +181,7 @@ def get_critical_roots(df: DataFrame, epsilon=1e-9):
         return pd.DataFrame([])
     return pd.concat(interp_data)
 
+
 def _find_tabular_line_range(lines):
     k = len(lines)
     j = FLUTTER_SUMMARY_TABULAR_LINE # linha após as labels de dados
@@ -188,11 +192,13 @@ def _find_tabular_line_range(lines):
         j += 1
     return (FLUTTER_SUMMARY_TABULAR_LINE, j)
 
+
 def _parse_label_subcase(line):
     res = p_header.search(line[1:])
     label = res.group('label').strip()
     subcase = res.group('subcase').replace('SUBCASE', '').strip()
     return (label, int(subcase))
+
 
 def _parse_summary_info(lines):
 
@@ -208,8 +214,10 @@ def _parse_summary_info(lines):
 
     return info
 
+
 def _check_skip_lines(line):
     return any(map(lambda k: k in line, SKIP_LINE_SET))
+
 
 def _is_continuation(i, pages):
 
@@ -222,6 +230,7 @@ def _is_continuation(i, pages):
                                         pages[i].info['MACH NUMBER'],
                                         pages[i].info['POINT'])
     return is_continuation
+
 
 def _create_multiindex(info, range):
     header = [

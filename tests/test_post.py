@@ -3,33 +3,49 @@ import pytest
 from nastran.post.f06 import read_f06
 from nastran.post.flutter import join_flutter_pages, flutter_pages_to_df, get_critical_roots, FlutterF06Page
 
-def test_read_f06():
-    f06 = read_f06('tests/files/flutter-f06-result.txt')
-    assert f06.pages != None
-    assert len(f06.pages) > 0
 
-def test_flutter_results1():
-    f06 = read_f06('tests/files/flutter-f06-result.txt')
-    only_flutter = f06.flutter
-    assert all(map(lambda p: type(p) == FlutterF06Page, only_flutter))
+@pytest.fixture
+def flutter_f06():
+    return read_f06('tests/files/flutter-f06-result.txt')
 
-def test_flutter_results2():
-    f06 = read_f06('tests/files/flutter-f06-result.txt')
-    only_flutter = f06.flutter
-    reduced_flutter = join_flutter_pages(only_flutter)
-    assert len(only_flutter) >= len(reduced_flutter)
 
-def test_flutter_results3():
-    f06 = read_f06('tests/files/flutter-f06-result.txt')
-    only_flutter = f06.flutter
-    reduced_flutter = join_flutter_pages(only_flutter)
-    df = flutter_pages_to_df(reduced_flutter)
-    assert len(df) == sum(map(lambda p: len(p.df), reduced_flutter))
+@pytest.fixture
+def flutter_pages(flutter_f06):
+    return flutter_f06.flutter
 
-def test_flutter_results4():
-    f06 = read_f06('tests/files/flutter-f06-result.txt')
-    only_flutter = f06.flutter
-    reduced_flutter = join_flutter_pages(only_flutter)
-    df = flutter_pages_to_df(reduced_flutter)
-    df_cr = get_critical_roots(df)
-    assert len(df_cr) == 1
+
+@pytest.fixture
+def flutter_pages_joint(flutter_pages):
+    return join_flutter_pages(flutter_pages)
+
+
+@pytest.fixture
+def flutter_pages_df(flutter_pages_joint):
+    return flutter_pages_to_df(flutter_pages_joint)
+
+
+@pytest.fixture
+def flutter_pages_df_critic(flutter_pages_df):
+    return get_critical_roots(flutter_pages_df)
+
+
+def test_read_f06(flutter_f06):
+    assert flutter_f06.pages != None
+    assert len(flutter_f06.pages) == 70
+
+
+def test_flutter_results1(flutter_pages):
+    assert all(map(lambda p: type(p) == FlutterF06Page, flutter_pages))
+    assert len(flutter_pages) == 30
+
+
+def test_flutter_results2(flutter_pages_joint):
+    assert len(flutter_pages_joint) == 15
+
+
+def test_flutter_results3(flutter_pages_joint, flutter_pages_df):
+    assert len(flutter_pages_df) == sum(map(lambda p: len(p.df), flutter_pages_joint))
+
+
+def test_flutter_results4(flutter_pages_df_critic):
+    assert len(flutter_pages_df_critic) == 1

@@ -19,3 +19,6 @@ sandbox
 .pytest_cache
 *__pycache__
 *_cache
+
+dist
+*.egg-info
