@@ -21,4 +21,5 @@ sandbox
 *_cache
 
 dist
+env
 *.egg-info
