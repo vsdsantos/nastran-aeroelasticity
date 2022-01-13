@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Dict, Type
 from numpy.lib.utils import deprecate
 
-import yaml
+# import yaml
 from pyNastran.bdf.bdf import BDF, CaseControlDeck
 
 from nastran.utils import IdUtility, set_object_properties
@@ -33,11 +33,11 @@ class Subcase(CaseControl):
     def properties(self):
         return self.__dict__
 
-    @classmethod
-    def create_from_yaml(cls, file_name):
-        with open(file_name, 'r') as file:
-            data = yaml.safe_load(file)
-        return cls.create_from_dict(data['id'], data)
+    # @classmethod
+    # def create_from_yaml(cls, file_name):
+    #     with open(file_name, 'r') as file:
+    #         data = yaml.safe_load(file)
+    #     return cls.create_from_dict(data['id'], data)
 
     @classmethod
     def create_from_dict(cls, sub_id, data):
@@ -100,26 +100,26 @@ class AnalysisModel(ABC):
                 self.model.add_card_lines(lines, key, comment=comments)
         print('Done!')
 
-    @deprecate
-    def load_analysis_from_yaml(self, yaml_file_name: str):
-        with open(yaml_file_name, 'r') as file:
-            data = yaml.safe_load(file)
-        self.params = data['params']
-        self.diags = data['diags']
-        self.interface = data['interface']
-        for key, subcase in data['subcases'].items():
-            self.create_subcase_from_dict(Subcase, key, subcase)
+    # @deprecate
+    # def load_analysis_from_yaml(self, yaml_file_name: str):
+    #     with open(yaml_file_name, 'r') as file:
+    #         data = yaml.safe_load(file)
+    #     self.params = data['params']
+    #     self.diags = data['diags']
+    #     self.interface = data['interface']
+    #     for key, subcase in data['subcases'].items():
+    #         self.create_subcase_from_dict(Subcase, key, subcase)
 
     def set_global_case_from_dict(self, data):
         self.global_case = CaseControl.create_from_dict(data)
 
-    def create_subcase_from_yaml(self, sub_type: Type[Subcase], sub_id, subcase_file_name):
-        # assert sub_id not in self.subcases.keys()
+#     def create_subcase_from_yaml(self, sub_type: Type[Subcase], sub_id, subcase_file_name):
+#         # assert sub_id not in self.subcases.keys()
         
-        sub = sub_type.create_from_yaml(subcase_file_name)
-        self.subcases[sub_id] = sub
+#         sub = sub_type.create_from_yaml(subcase_file_name)
+#         self.subcases[sub_id] = sub
 
-        return sub
+#         return sub
 
     def create_subcase_from_dict(self, sub_type: Type[Subcase], sub_id, sub_dict):
         # assert sub_id not in self.subcases.keys()

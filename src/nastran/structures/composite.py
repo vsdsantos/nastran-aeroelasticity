@@ -1,22 +1,9 @@
 
 from typing import List
 from pyNastran.bdf.cards.properties.shell import PCOMP
-from pyNastran.bdf.cards.materials import MAT8
+from pyNastran.bdf.cards.materials import MAT8, MAT5, MAT2
 
-
-class OrthotropicMaterial:
-
-    def __init__(self, mid, E1, E2, nu12, G12, rho) -> None:
-        self.mid = int(mid)
-        self.E1 = float(E1)
-        self.E2 = float(E2)
-        self.nu12 = float(nu12)
-        self.G12 = float(G12)
-        self.rho = float(rho)
-
-    def to_mat8(self) -> MAT8:
-        return MAT8(self.mid, self.E1, self.E2, self.nu12, g12=self.G12, rho=self.rho)
-
+from nastran.structures.material import OrthotropicMaterial
 
 class Sheet:
 

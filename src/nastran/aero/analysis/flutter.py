@@ -4,7 +4,7 @@ from pyNastran.bdf.bdf import BDF, CaseControlDeck
 
 from nastran.analysis import AnalysisModel, Subcase
 
-import yaml
+# import yaml
 
 FMETHODS = {
     1: 'K',
@@ -52,7 +52,7 @@ class FlutterAnalysisModel(AnalysisModel):
             aefact = self.model.add_aefact(self.idutil.get_next_aefact_id(),
                                      [v for ma in zip(machs, alphas) for v in ma])
         else:
-            raise Exception('Flutter method not implemented') 
+            raise Exception('Selected {} method is not implemented'.format(self.global_case.method)) 
 
         return aefact
 
