@@ -1,5 +1,5 @@
 # .github/workflows/pythonpackage.yml
-name: Python package
+name: Python CI
 
 on: [push, pull_request]
 
@@ -18,7 +18,8 @@ jobs:
         with:
             python-version: ${{ matrix.python-version }}
 
+      - name: Set up dependencies
+        run: make
+
       - name: Test with pytest
-        run: |
-            pip install pytest
-            pytest --verbose
+        run: make test
