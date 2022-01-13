@@ -13,6 +13,8 @@ But it can be extended to use with any aerodynamic element.
 This software is result of a research project of the Department of Mechanical Engineering
 at the Federal University of Minas Gerais (UFMG).
 
+Please, [cite us](./docs/cite-us.md) if you use this project.
+
 ## What is Panel Flutter?
 
 Panel Flutter is a specific phenomena studied in the aerospace engineering field. It is a dynamic instability resulted from the interaction of aerodynamic, elastic and inertial forces (and thermal stresses). It mostly happens at supersonic speeds (M > 1.2) mostly because the needed energy to provide instability in such structure (a panel) is high.
@@ -20,7 +22,7 @@ Panel Flutter is a specific phenomena studied in the aerospace engineering field
 ## What is NASTRAN?
 
 NASTRAN (acronym for NAsa STRuctural ANalysis) is a software originally made by NASA in FORTRAN for structural analysis. It has become public domain since (??), and after that CAE companies had developed the code further, but closely.
-Today (acctually since the 70's) it have many capabilities, including aeroelastic analysis.
+Today -- actually since the 70's -- it have many capabilities, including aeroelastic analysis.
 
 Some efforts in the FOSS version of Nastran are placed in the [MYSTRAN](https://www.mystran.com/).
 
