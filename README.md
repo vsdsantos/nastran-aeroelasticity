@@ -17,7 +17,7 @@ Please, [cite us](./docs/cite-us.md) if you use this project.
 
 ## What is Panel Flutter?
 
-Panel Flutter is a specific phenomena studied in the aerospace engineering field. It is a dynamic instability resulted from the interaction of aerodynamic, elastic and inertial forces (and thermal stresses). It mostly happens at supersonic speeds (M > 1.2) mostly because the needed energy to provide instability in such structure (a panel) is high.
+Panel Flutter is a specific aeroelastic phenomena studied in the aerospace engineering field. It is a dynamic instability resulted from the interaction of aerodynamic, elastic and inertial forces (and thermal stresses). It usually can happen at supersonic speeds (M > 1.2) mostly because the needed energy to provide instability in such structure (a panel) is high. When we say "dynamic instability", this means that response (or amplitude) in displacement of the given panel will grow exponentially. In fact, the growth is limited by the non-linear effects (normally structural), but induces very high cyclic stresses in the structure, and in consequence reduces its fatigue life.
 
 ## What is NASTRAN?
 
