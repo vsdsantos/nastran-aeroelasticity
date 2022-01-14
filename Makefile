@@ -16,7 +16,6 @@ test:
 	. env/bin/activate; python -m pytest
 
 clean:
-	rm -rf dist
 	rm -rf env
 
 install:

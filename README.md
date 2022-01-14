@@ -1,6 +1,6 @@
 [![DeepSource](https://static.deepsource.io/deepsource-badge-light-mini.svg)](https://deepsource.io/gh/zuckberj/nastran-aero-flutter/?ref=repository-badge)
 
-# nastran-aero-flutter
+# nastran-aeroelasticity
 
 This project is intended to analyze the Supersonic Panel Flutter using the NASTRAN routines.
 It has pre and post processing routines to generate the NASTRAN models and parse the results.
