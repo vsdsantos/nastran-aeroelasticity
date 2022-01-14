@@ -32,21 +32,21 @@ def parse_text_value(value):
             return value
 
 
-def read_and_concat_f06s(case_files, labels, label_name="THETA"):
-
-    if len(labels) != len(case_files):
-        raise Exception("Collections should be of same size.")
-
-    df_results = []
-
-    for i, fn in enumerate(case_files):
-        print("Reading... {}".format(fn))
-        df_data = read_f06(fn)
-        df_results.append(
-            pd.concat(
-                { labels[i]: df_data },
-                names=[label_name]
-            )
-        )
-
-    return pd.concat(df_results)
+# def read_and_concat_f06s(case_files, labels, label_name="THETA"):
+#
+#     if len(labels) != len(case_files):
+#         raise Exception("Collections should be of same size.")
+#
+#     df_results = []
+#
+#     for i, fn in enumerate(case_files):
+#         print("Reading... {}".format(fn))
+#         df_data = read_f06(fn)
+#         df_results.append(
+#             pd.concat(
+#                 { labels[i]: df_data },
+#                 names=[label_name]
+#             )
+#         )
+#
+#     return pd.concat(df_results)
