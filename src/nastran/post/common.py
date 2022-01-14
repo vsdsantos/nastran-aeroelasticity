@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 from pandas.core.frame import DataFrame
 
 class F06Page:

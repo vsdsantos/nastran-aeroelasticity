@@ -111,20 +111,20 @@ def calc_sawyer_dyn_pressure(vel, mach, D, vref, a, rho):
     return (rho * (vel * vref) ** 2) * (a ** 3) / (np.sqrt(mach ** 2 - 1) * D)
 
 
-def parse_panel_flutter_results(analysis, case_files, theta_range, D11):
-
-    df = read_and_concat_f06s(case_files, theta_range)
-
-    # print(df.info())
-
-    df['DYNPRSS'] = calc_sawyer_dyn_pressure(df.VELOCITY,
-                                         df.index.get_level_values('MACH NUMBER'),
-                                         [D11]*len(df),
-                                         analysis.subcases[1].vref,
-                                         analysis.subcases[1].ref_chord,
-                                         analysis.subcases[1].ref_rho)
-
-    return df
+# def parse_panel_flutter_results(analysis, case_files, theta_range, D11):
+#
+#     # df = read_and_concat_f06s(case_files, theta_range)
+#
+#     # print(df.info())
+#
+#     df['DYNPRSS'] = calc_sawyer_dyn_pressure(df.VELOCITY,
+#                                          df.index.get_level_values('MACH NUMBER'),
+#                                          [D11]*len(df),
+#                                          analysis.subcases[1].vref,
+#                                          analysis.subcases[1].ref_chord,
+#                                          analysis.subcases[1].ref_rho)
+#
+#     return df
 
 
 def get_critical_roots(df: DataFrame, epsilon=1e-9):
