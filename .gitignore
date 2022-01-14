@@ -23,4 +23,6 @@ sandbox
 dist
 env
 *.egg-info
+
 .coverage
+junit
