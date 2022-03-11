@@ -169,7 +169,7 @@ class AnalysisModel(ABC):
                 continue
             self.model.case_control_deck.add_parameter_to_local_subcase(
                 subcase.id,
-                '{} = {}'.format(key.upper(), value))
+                f"{key.upper()} = {value}")
 
     def _write_case_control_cards(self):
         # Case Control
@@ -187,9 +187,13 @@ class AnalysisModel(ABC):
 
     def _write_params(self):
         # params
-        for key, param in self.params.items():
-            if hasattr(param, '__iter__'):  # check if object is iterable
-                self.model.add_param(key=key, values=list(param))
-            else:
-                self.model.add_param(key=key, values=[param])
+        if self.params == None:
+            print('WARNING: No PARAMS defined')
+        else:
+            for key, param in self.params.items():
+                if hasattr(param, '__iter__'):  # check if object is iterable
+                    self.model.add_param(key=key, values=list(param))
+                else:
+                    self.model.add_param(key=key, values=[param])
+        
 

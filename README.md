@@ -15,6 +15,25 @@ at the Federal University of Minas Gerais (UFMG).
 
 Please, [cite us](./docs/cite-us.md) if you use this project.
 
+## Features
+
+ - 2D structural model generation
+   - Flat plate
+   - Materials
+     - Isotropic
+     - Orthotropic
+       - Laminate
+   - Custom Boundary Conditions (e.g. SSSS, CCCC)
+ - Aerodynamic model generation
+   - Piston Theory (CAERO5)
+   - ZAERO (CAERO1)
+ - Thermal effects
+ - Post Processing
+   - `.f06` file parser to `pandas`'s `DataFrame`
+   - V-f and V-g plots
+   - Complex eigenvalue plot
+   - Root finding with linear interpolation
+
 ## What is Panel Flutter?
 
 Panel Flutter is a specific aeroelastic phenomena studied in the aerospace engineering field. It is a dynamic instability resulted from the interaction of aerodynamic, elastic and inertial forces (and thermal stresses). It usually can happen at supersonic speeds (M > 1.2) mostly because the needed energy to provide instability in such structure (a panel) is high. When we say "dynamic instability", this means that response (or amplitude) in displacement of the given panel will grow exponentially. In fact, the growth is limited by the non-linear effects (normally structural), but induces very high cyclic stresses in the structure, and in consequence reduces its fatigue life.

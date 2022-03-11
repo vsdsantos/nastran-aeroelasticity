@@ -23,6 +23,9 @@ BCTYPES = {
     'V': BCType('V', '3', 'Vertical Constrained'),
 }
 
+def generate_bc_cases(labels_lst):
+    return { i: generate_bc_case(l) for i, l in enumerate(labels_lst) }
+
 def generate_bc_case(labels):
     """
         labels pattern -> '1234' -> 'SSCF'

@@ -4,9 +4,7 @@ from copy import copy
 
 from pandas.core.frame import DataFrame
 
-from nastran.aero.analysis.flutter import FlutterSubcase
-from nastran.aero.analysis.panel_flutter import PanelFlutterSubcase
-from nastran.post.common import extract_tabulated_data, parse_text_value, F06Page
+from f06.common import extract_tabulated_data, parse_text_value, find_tabular_line_range, parse_label_subcase, F06Page
 
 import numpy as np
 import pandas as pd
@@ -39,17 +37,16 @@ FLUTTER_DATA_KEYS = {
     'IMAGEIGVAL': 'Imag Eigenvalue',
 }
 
-SKIP_LINE_SET = {"*** USER INFORMATION MESSAGE", "A ZERO FREQUENCY"}
 
-p_header = re.compile(r"(?P<label>.+(?=SUBCASE))(?P<subcase>SUBCASE\s\d+)")
+
 p_info = {key:re.compile(r'\b{} =\s*\S*'.format(key)) for key in FLUTTER_INFO_KEYS}
 
 
 class FlutterF06Page(F06Page):
-    def __init__(self, df=None, info=None, meta=None):
-        super().__init__(meta)
+    def __init__(self, df=None, info=None, raw_lines=None, meta=None):
+        super().__init__(raw_lines, meta)
         self.df = df
-        self.info = info
+        self.info = {} if info == None else info
 
     def __repr__(self):
         return self.__str__()
@@ -95,16 +92,16 @@ def parse_flutter_page(lines):
     raw_info = [lines[i] for i in FLUTTER_SUMMARY_INFO_LINES]
     info = _parse_summary_info(raw_info)
 
-    label, subcase = _parse_label_subcase(lines[FLUTTER_SUMMARY_SUBCASE])
+    label, subcase = parse_label_subcase(lines[FLUTTER_SUMMARY_SUBCASE])
     info['LABEL'] = label
     info['SUBCASE'] = subcase
 
-    a, b = _find_tabular_line_range(lines)
+    a, b = find_tabular_line_range(lines, FLUTTER_SUMMARY_TABULAR_LINE)
     parsed_data = extract_tabulated_data(lines[a:b])
 
     df = pd.DataFrame(parsed_data, columns=list(FLUTTER_DATA_KEYS.keys()))
 
-    return FlutterF06Page(df, info)
+    return FlutterF06Page(df, info, lines)
 
 
 def calc_sawyer_dyn_pressure(vel, mach, D, vref, a, rho):
@@ -177,27 +174,12 @@ def get_critical_roots(df: DataFrame, epsilon=1e-9):
         interp_data.append(refact_df)
 
     if len(interp_data) == 0:
-        print("WARNING: No critial roots were found... check episilon value or analysis parameters.")
+        print("WARNING: No critial roots were found... check epsilon value or analysis parameters.")
         return pd.DataFrame([])
     return pd.concat(interp_data)
 
 
-def _find_tabular_line_range(lines):
-    k = len(lines)
-    j = FLUTTER_SUMMARY_TABULAR_LINE # linha após as labels de dados
-    while j < k: # primeiro char na linha final da pagina é 1
-        l = lines[j]
-        if _check_skip_lines(l) or l.strip() == '':
-            break
-        j += 1
-    return (FLUTTER_SUMMARY_TABULAR_LINE, j)
 
-
-def _parse_label_subcase(line):
-    res = p_header.search(line[1:])
-    label = res.group('label').strip()
-    subcase = res.group('subcase').replace('SUBCASE', '').strip()
-    return (label, int(subcase))
 
 
 def _parse_summary_info(lines):
@@ -213,11 +195,6 @@ def _parse_summary_info(lines):
         info[key] = parse_text_value(value)
 
     return info
-
-
-def _check_skip_lines(line):
-    return any(map(lambda k: k in line, SKIP_LINE_SET))
-
 
 def _is_continuation(i, pages):
 
