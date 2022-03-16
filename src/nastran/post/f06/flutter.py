@@ -4,7 +4,7 @@ from copy import copy
 
 from pandas.core.frame import DataFrame
 
-from f06.common import extract_tabulated_data, parse_text_value, find_tabular_line_range, parse_label_subcase, F06Page
+from nastran.post.f06.common import extract_tabulated_data, parse_text_value, find_tabular_line_range, parse_label_subcase, F06Page
 
 import numpy as np
 import pandas as pd
@@ -124,13 +124,13 @@ def calc_sawyer_dyn_pressure(vel, mach, D, vref, a, rho):
 #     return df
 
 
-def get_critical_roots(df: DataFrame, epsilon=1e-9):
+def get_critical_roots(df: DataFrame, epsilon=1e-9, var_ref="DAMPING"):
 
     indexes = list(df.index.names)
     for label in ["INDEX", "POINT"]:
         indexes.remove(label)
 
-    critic_idx = df.loc[df.DAMPING >= -epsilon, 'VELOCITY'].groupby(indexes).apply(lambda df: df.idxmin())
+    critic_idx = df.loc[df[var_ref] >= -epsilon, 'VELOCITY'].groupby(indexes).apply(lambda df: df.idxmin())
 
     critic_modes_idx = critic_idx.apply(lambda i: i[:-1])
 
@@ -142,7 +142,7 @@ def get_critical_roots(df: DataFrame, epsilon=1e-9):
 
         df_s = df.loc[idx]
 
-        positive_damp_idx = df_s.DAMPING >= -epsilon
+        positive_damp_idx = df_s[var_ref] >= -epsilon
         if not any(positive_damp_idx):
             continue
 
@@ -156,7 +156,7 @@ def get_critical_roots(df: DataFrame, epsilon=1e-9):
             lower_row = df_s.loc[upper_row.name,:]
 
         # new row with damp = 0 to be interpolated
-        new_row = pd.Series([None, None, None, .0, None, None, None],
+        new_row = pd.Series([0. if h == var_ref else None for h in df_s.columns],
                             index=upper_row.index, name=-1)
 
         # concat rows and interpolate values

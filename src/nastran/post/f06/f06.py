@@ -2,8 +2,8 @@ import pandas as pd
 
 import datetime
 
-from f06.flutter import parse_flutter_page, FlutterF06Page
-from f06.eigval import parse_realeigval_page, RealEigValF06Page, summarize_real_eigvals, ModalEffectiveMassFractionF06Page
+from nastran.post.f06.flutter import parse_flutter_page, FlutterF06Page
+from nastran.post.f06.eigval import parse_realeigval_page, RealEigValF06Page, summarize_real_eigvals, ModalEffectiveMassFractionF06Page
 
 PAGE_PARSING_FUNCTIONS = {
     'flutter': parse_flutter_page,
@@ -79,7 +79,7 @@ def read_f06(filename: str):
     groups = _group_lines_by_page(raw_lines)
 
     pages = []
-
+    T = None
     for lines in groups:
         # TODO: Check Page Type and automatically send to function
         T = _check_page_type(lines, T)

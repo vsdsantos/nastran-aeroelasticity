@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 
-from f06.common import extract_tabulated_data, parse_text_value, find_tabular_line_range, parse_label_subcase, F06Page
+from nastran.post.f06.common import extract_tabulated_data, parse_text_value, find_tabular_line_range, parse_label_subcase, F06Page
 
 REALIGVAL_SUBCASE_LINE = 2
 REALIGVAL_TABULAR_LINE = 7
@@ -95,7 +95,8 @@ class ModalEffectiveMassFractionF06Page(F06Page):
         self.df = df
         self.info = {} if info == None else info
         self.continuation = continuation
-
+    
+    @classmethod
     def parse_page(cls, lines, is_continuation=False):
 
         if is_continuation:
@@ -118,6 +119,7 @@ class ModalEffectiveMassFractionF06Page(F06Page):
 
         return ModalEffectiveMassFractionF06Page(df, info, lines)
     
+    @classmethod
     def _parse_continuation_page(cls, lines):
 
         a, b = find_tabular_line_range(lines, 7)
@@ -137,6 +139,7 @@ class ModalEffectiveMassFractionF06Page(F06Page):
 
         return ModalEffectiveMassFractionF06Page(df, info, lines, True)
     
+    @classmethod
     def is_page_of_this_type(cls, lines, previous_page_type):
         
         if previous_page_type == 'ModalEffectiveMassFractionF06Page':
