@@ -124,7 +124,21 @@ def calc_sawyer_dyn_pressure(vel, mach, D, vref, a, rho):
 #     return df
 
 
-def get_critical_roots(df: DataFrame, epsilon=1e-9, var_ref="DAMPING"):
+def interpolate_df(df, x_col, x):
+    interpolated_vals = []
+    xs = df[x_col].to_list()
+    for col in df.columns:
+        if col == x_col:
+            interpolated_vals.append(x)
+            continue
+        ys = df[col].to_list()
+        y = ys[0] + (x - xs[0]) * (ys[1] - ys[0]) / (xs[1] - xs[0])
+        interpolated_vals.append(y)
+    new_df =  pd.DataFrame(interpolated_vals).T
+    new_df.columns = df.columns
+    return new_df
+
+def get_critical_roots(df, epsilon=1e-9, var_ref="DAMPING"):
 
     indexes = list(df.index.names)
     for label in ["INDEX", "POINT"]:
@@ -153,25 +167,18 @@ def get_critical_roots(df: DataFrame, epsilon=1e-9, var_ref="DAMPING"):
         if upper_row.name > 0:
             lower_row = df_s.loc[upper_row.name-1,:]
         else:
-            lower_row = df_s.loc[upper_row.name,:]
+            print("WARNING: Can't interpolate. Mode already in flutter")
+            continue
 
-        # new row with damp = 0 to be interpolated
-        new_row = pd.Series([0. if h == var_ref else None for h in df_s.columns],
-                            index=upper_row.index, name=-1)
-
-        # concat rows and interpolate values
-        interp_df = pd.concat([lower_row, new_row, upper_row], axis=1).T.interpolate()
-
-        # get interpolated row
-        interp_row = interp_df.loc[-1]
+        # new row interpolated for var_ref = 0.0
+        dft = pd.DataFrame([lower_row, upper_row])
+        new_row = interpolate_df(dft, var_ref, 0.0)
 
         # create a new DataFrame
         multi_idx = pd.MultiIndex.from_tuples([idx], names=df.index.names[:-1])
-        refact_df = pd.DataFrame([interp_row.to_numpy()],
-                                 index=multi_idx,
-                                 columns=df.columns)
+        new_row.index = multi_idx
 
-        interp_data.append(refact_df)
+        interp_data.append(new_row)
 
     if len(interp_data) == 0:
         print("WARNING: No critial roots were found... check epsilon value or analysis parameters.")
