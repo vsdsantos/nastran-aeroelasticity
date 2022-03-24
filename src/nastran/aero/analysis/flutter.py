@@ -72,11 +72,17 @@ class FlutterAnalysisModel(AnalysisModel):
                                          reduced_freq_velocity=velocities.sid)
 
         # real eigenvalue method card
-        method = self.model.add_eigrl(sid=self.idutil.get_next_method_id()+100,
-                                      norm='MASS',
-                                      nd=self.global_case.n_modes,
-                                      v1=self.global_case.frequency_limits[0],
-                                      v2=self.global_case.frequency_limits[1])
+        if len(self.global_case.frequency_limits) == 1:
+            method = self.model.add_eigrl(sid=self.idutil.get_next_method_id()+100,
+                                        norm='MASS',
+                                        nd=self.global_case.n_modes,
+                                        v1=self.global_case.frequency_limits[0])
+        else:
+            method = self.model.add_eigrl(sid=self.idutil.get_next_method_id()+100,
+                                        norm='MASS',
+                                        nd=self.global_case.n_modes,
+                                        v1=self.global_case.frequency_limits[0],
+                                        v2=self.global_case.frequency_limits[1])
         
         # AERO card
         self.model.add_aero(cref=self.global_case.ref_chord, rho_ref=self.global_case.ref_rho, velocity=1.0)
