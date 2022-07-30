@@ -153,3 +153,4 @@ class LaminatedStructuralPlate(StructuralPlate):
         plate = LaminatedStructuralPlate(p1, p2, p3, p4, nspan, nchord, ply)
         plate.generate_mesh()
         return plate
+    

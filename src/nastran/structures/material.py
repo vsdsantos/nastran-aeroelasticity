@@ -7,7 +7,7 @@ class IsotropicMaterial:
         self.mid = int(mid)
         self.E = float(E)
         self.nu = float(nu)
-        self.G = float(G)
+        self.G = G if G == None else float(G)
         self.rho = float(rho)
         self.alpha = float(alpha) if alpha else None
 

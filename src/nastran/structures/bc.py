@@ -1,4 +1,7 @@
 
+from nastran.analysis import AnalysisModel
+
+
 class BCType:
     
     def __init__(self, label, ids, desc):
@@ -41,20 +44,26 @@ def generate_bc_case(labels):
     """
     return PanelBC([BCTYPES[c] for c in labels], labels)
         
-def create_spcs_and_subcases(analysis, cases, nodes, subcase_class):
+def create_spcs_and_subcases(analysis: AnalysisModel, cases, nodes, subcase_class):
 
-    for i, spcs in cases.items():
+    for label, spc in create_spcs(analysis, cases, nodes):
+        sub_config = {
+            'LABEL': label,
+            'SPC': spc.conid,
+        }
+        analysis.create_subcase_from_dict(subcase_class, spc.conid, sub_config)
+
+def create_global_case(analysis: AnalysisModel, spc):
+    analysis.set_global_case_from_dict(subcase_class, i, sub_config)
+
+def create_spcs(analysis: AnalysisModel, spcs_dict, nodes):
+    for i, spcs in spcs_dict.items():
         spc_id = analysis.idutil.get_next_sid()
         for comp, nds in zip(spcs.get_bc_ids(), nodes):
             if comp == '':
                 continue
             else:
-                analysis.model.add_spc1(spc_id, comp, nds, comment=spcs.label)
-        sub_config = {
-            'LABEL': spcs.label,
-            'SPC': spc_id,
-        }
-        analysis.create_subcase_from_dict(subcase_class, i, sub_config)
+                yield (spcs.label, analysis.model.add_spc1(spc_id, comp, nds, comment=spcs.label))
 
 def create_springs(analysis, nodes):
     
