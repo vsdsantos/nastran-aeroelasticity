@@ -1,14 +1,11 @@
-from typing import Union
 
 from copy import copy
 
-from pandas.core.frame import DataFrame
 
 from nastran.post.f06.common import extract_tabulated_data, parse_text_value, find_tabular_line_range, parse_label_subcase, F06Page
 
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 
 import re
 
@@ -46,7 +43,7 @@ class FlutterF06Page(F06Page):
     def __init__(self, df=None, info=None, raw_lines=None, meta=None):
         super().__init__(raw_lines, meta)
         self.df = df
-        self.info = {} if info == None else info
+        self.info = {} if info is None else info
 
     def __repr__(self):
         return self.__str__()

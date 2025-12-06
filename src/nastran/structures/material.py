@@ -1,5 +1,5 @@
 
-from pyNastran.bdf.cards.materials import MAT8, MAT5, MAT2, MAT1
+from pyNastran.bdf.cards.materials import MAT8, MAT1
 
 class IsotropicMaterial:
     
@@ -7,7 +7,7 @@ class IsotropicMaterial:
         self.mid = int(mid)
         self.E = float(E)
         self.nu = float(nu)
-        self.G = G if G == None else float(G)
+        self.G = G if G is None else float(G)
         self.rho = float(rho)
         self.alpha = float(alpha) if alpha else None
 

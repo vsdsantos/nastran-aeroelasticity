@@ -1,4 +1,4 @@
-from abc import ABC, abstractmethod
+from abc import ABC
 from typing import Dict, Type
 from numpy.lib.utils import deprecate
 
@@ -187,7 +187,7 @@ class AnalysisModel(ABC):
 
     def _write_params(self):
         # params
-        if self.params == None:
+        if self.params is None:
             print('WARNING: No PARAMS defined')
         else:
             for key, param in self.params.items():

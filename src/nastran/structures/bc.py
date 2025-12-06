@@ -27,7 +27,7 @@ BCTYPES = {
 }
 
 def generate_bc_cases(labels_lst):
-    return { i: generate_bc_case(l) for i, l in enumerate(labels_lst) }
+    return { i: generate_bc_case(item) for i, item in enumerate(labels_lst) }
 
 def generate_bc_case(labels):
     """
@@ -53,8 +53,8 @@ def create_spcs_and_subcases(analysis: AnalysisModel, cases, nodes, subcase_clas
         }
         analysis.create_subcase_from_dict(subcase_class, spc.conid, sub_config)
 
-def create_global_case(analysis: AnalysisModel, spc):
-    analysis.set_global_case_from_dict(subcase_class, i, sub_config)
+# def create_global_case(analysis: AnalysisModel, spc):
+#     analysis.set_global_case_from_dict(subcase_class, i, sub_config)
 
 def create_spcs(analysis: AnalysisModel, spcs_dict, nodes):
     for i, spcs in spcs_dict.items():

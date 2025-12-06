@@ -1,7 +1,6 @@
 import pandas as pd
-import numpy as np
 
-from nastran.post.f06.common import extract_tabulated_data, parse_text_value, find_tabular_line_range, parse_label_subcase, F06Page
+from nastran.post.f06.common import extract_tabulated_data, find_tabular_line_range, parse_label_subcase, F06Page
 
 REALIGVAL_SUBCASE_LINE = 2
 REALIGVAL_TABULAR_LINE = 7
@@ -22,7 +21,7 @@ class RealEigValF06Page(F06Page):
     def __init__(self, df=None, info=None, raw_lines=None, meta=None):
         super().__init__(raw_lines, meta)
         self.df = df
-        self.info = {} if info == None else info
+        self.info = {} if info is None else info
 
     def __repr__(self):
         return self.__str__()
@@ -93,7 +92,7 @@ class ModalEffectiveMassFractionF06Page(F06Page):
     def __init__(self, df=None, info=None, continuation=False, rawlines=None, meta=None):
         super().__init__(rawlines, meta)
         self.df = df
-        self.info = {} if info == None else info
+        self.info = {} if info is None else info
         self.continuation = continuation
     
     @classmethod

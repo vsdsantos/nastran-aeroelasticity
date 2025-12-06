@@ -2,7 +2,6 @@
 from typing import List
 import re
 from pyNastran.bdf.cards.properties.shell import PCOMP
-from pyNastran.bdf.cards.materials import MAT8, MAT5, MAT2
 
 from nastran.structures.material import OrthotropicMaterial
 
@@ -59,8 +58,8 @@ def parse_ply_config(pid, mat, thick, ply_config):
     sheets = []
     lists = re.findall(r'\[(.*?)\]', ply_config)
     mods = re.findall(r'\]([\dsS]*)', ply_config)
-    for l, mod in zip(lists, mods):
-        thetas = re.findall(r'([+-]?[0-9]?[0-9])', l)
+    for item, mod in zip(lists, mods):
+        thetas = re.findall(r'([+-]?[0-9]?[0-9])', item)
         mult = mod.upper().replace('S','')
         if len(mult) > 0 and mult.isnumeric():
             thetas = thetas*int(mult)

@@ -37,10 +37,10 @@ def read_modal_f06(filename: str):
             raw_content = []
             j = i+3 # linha após as labels de dados
             while raw_lines[j][0] != '1': # primeiro char na linha final da pagina é 1
-                l = raw_lines[j]
-                if l.strip() == '':
+                item = raw_lines[j]
+                if item.strip() == '':
                     break
-                raw_content.append(l)
+                raw_content.append(item)
                 j += 1
 
             parsed_data = _parse_content(raw_content)

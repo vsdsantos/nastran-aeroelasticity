@@ -1,6 +1,4 @@
-from pandas.core.frame import DataFrame
 
-import pandas as pd
 import numpy as np
 import re
 import calendar
@@ -19,7 +17,7 @@ class F06Page:
 
     def __init__(self, raw_lines=None, meta=None):
         self.raw_lines = raw_lines
-        self.meta = {} if meta == None else meta
+        self.meta = {} if meta is None else meta
         self.parse_page_metadata_header()
     
     def parse_page_metadata_header(self):
@@ -48,8 +46,8 @@ def find_tabular_line_range(lines, shift):
     k = len(lines)
     j = shift # linha após as labels de dados
     while j < k: # primeiro char na linha final da pagina é 1
-        l = lines[j]
-        if _check_skip_lines(l) or l.strip() == '':
+        item = lines[j]
+        if _check_skip_lines(item) or item.strip() == '':
             break
         j += 1
     return (shift, j)        
