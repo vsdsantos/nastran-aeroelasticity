@@ -1,7 +1,12 @@
 import pytest
 
 from nastran.post.f06 import read_f06
-from nastran.post.flutter import join_flutter_pages, flutter_pages_to_df, get_critical_roots, FlutterF06Page
+from nastran.post.f06.flutter import (
+    FlutterF06Page,
+    flutter_pages_to_df,
+    get_critical_roots,
+    join_flutter_pages,
+)
 
 
 @pytest.fixture
@@ -30,12 +35,12 @@ def flutter_pages_df_critic(flutter_pages_df):
 
 
 def test_read_f06(flutter_f06):
-    assert flutter_f06.pages != None
+    assert flutter_f06.pages is not None
     assert len(flutter_f06.pages) == 70
 
 
 def test_flutter_results1(flutter_pages):
-    assert all(map(lambda p: type(p) == FlutterF06Page, flutter_pages))
+    assert all(isinstance(page, FlutterF06Page) for page in flutter_pages)
     assert len(flutter_pages) == 30
 
 
@@ -44,7 +49,7 @@ def test_flutter_results2(flutter_pages_joint):
 
 
 def test_flutter_results3(flutter_pages_joint, flutter_pages_df):
-    assert len(flutter_pages_df) == sum(map(lambda p: len(p.df), flutter_pages_joint))
+    assert len(flutter_pages_df) == sum(len(page.df) for page in flutter_pages_joint)
 
 
 def test_flutter_results4(flutter_pages_df_critic):

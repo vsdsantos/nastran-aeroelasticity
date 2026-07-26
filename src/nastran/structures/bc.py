@@ -54,10 +54,15 @@ def create_spcs_and_subcases(analysis: AnalysisModel, cases, nodes, subcase_clas
         analysis.create_subcase_from_dict(subcase_class, spc.conid, sub_config)
 
 def create_global_case(analysis: AnalysisModel, spc):
-    analysis.set_global_case_from_dict(subcase_class, i, sub_config)
+    """Create and register the global case control entry for a given SPC."""
+    global_case = {
+        'LABEL': 'GLOBAL',
+        'SPC': spc.conid,
+    }
+    analysis.set_global_case_from_dict(global_case)
 
 def create_spcs(analysis: AnalysisModel, spcs_dict, nodes):
-    for i, spcs in spcs_dict.items():
+    for spcs in spcs_dict.values():
         spc_id = analysis.idutil.get_next_sid()
         for comp, nds in zip(spcs.get_bc_ids(), nodes):
             if comp == '':
