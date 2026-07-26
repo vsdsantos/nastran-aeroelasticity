@@ -62,7 +62,7 @@ def create_global_case(analysis: AnalysisModel, spc):
     analysis.set_global_case_from_dict(global_case)
 
 def create_spcs(analysis: AnalysisModel, spcs_dict, nodes):
-    for i, spcs in spcs_dict.items():
+    for spcs in spcs_dict.values():
         spc_id = analysis.idutil.get_next_sid()
         for comp, nds in zip(spcs.get_bc_ids(), nodes):
             if comp == '':
