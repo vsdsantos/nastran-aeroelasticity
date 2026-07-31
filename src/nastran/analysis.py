@@ -163,7 +163,7 @@ class AnalysisModel(ABC):
     def create_subcase(self, sub_type: type[Subcase], sub_id):
         # assert sub_id not in self.subcases.keys()
 
-        sub = sub_type.create_from_dict()
+        sub = sub_type.create_from_dict(sub_id, {})
         self.subcases[sub_id] = sub
 
         return sub

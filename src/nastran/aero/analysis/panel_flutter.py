@@ -103,7 +103,7 @@ class PanelFlutterAnalysisModel(FlutterAnalysisModel):
             setg=grid_group.sid,
         )
 
-    def _write_superpanel_cards(self, **args):
+    def _write_superpanel_cards(self, superpanel=None):
         pass
 
 
@@ -119,14 +119,15 @@ class PanelFlutterPistonAnalysisModel(PanelFlutterAnalysisModel):
     #                      params=params, diags=diags, interface=interface,
     #                      superpanels=superpanels)
 
-    def _write_superpanel_cards(self, superpanel: SuperAeroPanel5):
+    def _write_superpanel_cards(self, superpanel: SuperAeroPanel5):  # type: ignore[override]
         # AEFACT cards
         thickness_integrals = self.model.add_aefact(
             self.idutil.get_next_aefact_id(), superpanel.thick_int
         )
 
         machs_n_alphas = self._write_machs_and_alphas(
-            self.global_case.machs, self.global_case.alphas
+            self.global_case.machs,  # type: ignore[union-attr]
+            self.global_case.alphas,  # type: ignore[union-attr]
         )
 
         # PAERO5 card
@@ -194,7 +195,7 @@ class PanelFlutterPistonZAEROAnalysisModel(PanelFlutterAnalysisModel):
     #                      params=params, diags=diags, interface=interface,
     #                      superpanels=superpanels)
 
-    def _write_superpanel_cards(self, superpanel: SuperAeroPanel1):
+    def _write_superpanel_cards(self, superpanel: SuperAeroPanel1):  # type: ignore[override]
         paero = self.model.add_paero1(self.idutil.get_next_paero_id())
 
         elements = {}
@@ -245,4 +246,4 @@ class PanelFlutterPistonZAEROAnalysisModel(PanelFlutterAnalysisModel):
         )
 
         # self.write_spline1_for_panel(elements)
-        self.write_splines2_for_superpanel(superpanel, elements["main"])
+        self._write_splines2_for_superpanel(superpanel, elements["main"])

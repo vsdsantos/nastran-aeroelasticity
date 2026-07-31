@@ -7,7 +7,7 @@ def plot_complex(df: pd.DataFrame, modes=None):
     for point, point_df in df.groupby(level="POINT"):
         if modes is not None and point not in modes:
             continue
-        plt.plot(point_df.REALEIGVAL, point_df.IMAGEIGVAL, label=f"Mode {int(point)}", markevery=4)
+        plt.plot(point_df.REALEIGVAL, point_df.IMAGEIGVAL, label=f"Mode {int(point)}", markevery=4)  # type: ignore[call-overload]
     fig.legend()
     return fig
 
@@ -17,7 +17,7 @@ def plot_v_f(df: pd.DataFrame, modes=None):
     for point, point_df in df.groupby(level="POINT"):
         if modes is not None and (point not in modes):
             continue
-        plt.plot(point_df.VELOCITY, point_df.FREQUENCY, label=f"Mode {int(point)}", markevery=4)
+        plt.plot(point_df.VELOCITY, point_df.FREQUENCY, label=f"Mode {int(point)}", markevery=4)  # type: ignore[call-overload]
     fig.legend()
     return fig
 
@@ -39,7 +39,7 @@ def plot_vf_vg(df: pd.DataFrame, modes=None):
         if modes is not None and (point not in modes):
             continue
 
-        axs[0].plot(point_df.VELOCITY, point_df.FREQUENCY, label=f"Mode {int(point)}", markevery=4)
+        axs[0].plot(point_df.VELOCITY, point_df.FREQUENCY, label=f"Mode {int(point)}", markevery=4)  # type: ignore[call-overload]
         axs[1].plot(point_df.VELOCITY, point_df.DAMPING, markevery=4)
 
     axs[0].grid()

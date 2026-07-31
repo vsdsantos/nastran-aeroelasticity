@@ -1,4 +1,5 @@
 import datetime
+from typing import Any
 
 import pandas as pd
 
@@ -10,7 +11,7 @@ from nastran.post.f06.eigval import (
 )
 from nastran.post.f06.flutter import FlutterF06Page, parse_flutter_page
 
-PAGE_PARSING_FUNCTIONS = {
+PAGE_PARSING_FUNCTIONS: dict[str, Any] = {
     "flutter": parse_flutter_page,
     "eigvalsummary": "",
     "realeigval": parse_realeigval_page,
@@ -85,7 +86,7 @@ def read_f06(filename: str):
     groups = _group_lines_by_page(raw_lines)
 
     pages = []
-    T = None
+    T: str | None = None
     for lines in groups:
         # TODO: Check Page Type and automatically send to function
         T = _check_page_type(lines, T)
@@ -98,7 +99,7 @@ def read_f06(filename: str):
     return F06Results(pages)
 
 
-def _check_page_type(lines, previous_page_type=None):
+def _check_page_type(lines, previous_page_type=None) -> str:
     if len(lines) - 1 >= FLUTTER_CHECK_LINE and FLUTTER_CHECK_STR in lines[FLUTTER_CHECK_LINE]:
         return "flutter"
     elif (
