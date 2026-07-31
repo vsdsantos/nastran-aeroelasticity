@@ -1,14 +1,15 @@
-
 def set_object_properties(obj, data_dict):
     for key, val in data_dict.items():
         setattr(obj, key, val)
 
+
 def _get_last_id_from_ids(elements):
     return elements[-1] if elements else 0
 
+
 class IdUtility:
     """
-        This class is a utility to work with IDs in the BDF format using pyNastran
+    This class is a utility to work with IDs in the BDF format using pyNastran
     """
 
     def __init__(self, model):
@@ -79,7 +80,7 @@ class IdUtility:
 
     def get_next_coord_id(self):
         return self.get_last_coord_id() + 1
-    
+
     def get_last_sid(self):
         return _get_last_id_from_ids(list(self.model.spcs.keys()))
 

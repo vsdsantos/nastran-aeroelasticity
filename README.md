@@ -45,6 +45,31 @@ Today -- actually since the 70's -- it have many capabilities, including aeroela
 
 Some efforts in the FOSS version of Nastran are placed in the [MYSTRAN](https://www.mystran.com/).
 
+## Development
+
+This project uses [uv](https://docs.astral.sh/uv/) for dependency management and task running.
+
+### Setup
+
+```bash
+# Install uv (if not already installed)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Install all dependencies (including dev tools)
+uv sync --group dev
+```
+
+### Common tasks
+
+| Task | Command |
+|------|---------|
+| Run tests | `uv run pytest` |
+| Run tests with coverage | `uv run pytest --cov=src --cov-report=html` |
+| Lint (ruff) | `uv run ruff check src` |
+| Format (ruff) | `uv run ruff format src` |
+| Type check (mypy) | `uv run mypy` |
+| Build package | `uv build` |
+
 ## Use
 
 Some examples of utilization are placed on the [notebooks](./notebooks) directory. Please refer to them. Some documentation shall be made soon.

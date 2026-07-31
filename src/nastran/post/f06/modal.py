@@ -1,15 +1,16 @@
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 MODAL_REAL_EIGV_KEYS = {
-    'MODE': 'Frequency',
-    'EXTRACTIONORDER': 'Inverse Frequency',
-    'EIGENVALUE': 'Velocity',
-    'RADIANS': 'Damping',
-    'CYCLES': 'Damping',
-    'GENERALIZEDMASS': 'Frequency',
-    'GENERALIZEDSTIFF': 'Real Eigenvalue',
+    "MODE": "Frequency",
+    "EXTRACTIONORDER": "Inverse Frequency",
+    "EIGENVALUE": "Velocity",
+    "RADIANS": "Damping",
+    "CYCLES": "Damping",
+    "GENERALIZEDMASS": "Frequency",
+    "GENERALIZEDSTIFF": "Real Eigenvalue",
 }
+
 
 def _parse_content(content):
     data = []
@@ -27,20 +28,20 @@ def _parse_content(content):
 
     return data
 
+
 def read_modal_f06(filename: str):
-    with open(filename, 'r') as file:
+    with open(filename) as file:
         raw_lines = file.readlines()
 
     for i, line in enumerate(raw_lines):
-        if 'R E A L   E I G E N V A L U E S' in line:
-
+        if "R E A L   E I G E N V A L U E S" in line:
             raw_content = []
-            j = i+3 # linha após as labels de dados
-            while raw_lines[j][0] != '1': # primeiro char na linha final da pagina é 1
-                l = raw_lines[j]
-                if l.strip() == '':
+            j = i + 3  # linha após as labels de dados
+            while raw_lines[j][0] != "1":  # primeiro char na linha final da pagina é 1
+                line = raw_lines[j]
+                if line.strip() == "":
                     break
-                raw_content.append(l)
+                raw_content.append(line)
                 j += 1
 
             parsed_data = _parse_content(raw_content)

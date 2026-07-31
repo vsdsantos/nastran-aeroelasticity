@@ -35,11 +35,54 @@ where = ["src"]
 dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
-    "flake8>=6.0",
-    "flake8-html>=0.4",
+    "ruff>=0.5",
+    "mypy>=1.10",
+    "pandas-stubs>=2.0",
     "build>=1.0",
     "openpyxl>=3.1",
 ]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+# ---------------------------------------------------------------------------
+# Ruff — linter + formatter (replaces flake8, isort, pyupgrade, etc.)
+# ---------------------------------------------------------------------------
+[tool.ruff]
+src = ["src"]
+target-version = "py39"
+line-length = 100
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "SIM", # flake8-simplify
+    "RUF", # ruff-specific rules
+]
+ignore = [
+    "E501",   # line too long (handled by formatter)
+    "SIM108", # ternary operator — not always cleaner
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["nastran"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+# ---------------------------------------------------------------------------
+# Mypy — static type checker
+# ---------------------------------------------------------------------------
+[tool.mypy]
+python_version = "3.9"
+files = ["src"]
+ignore_missing_imports = true
+warn_unused_ignores = true
+warn_return_any = false

@@ -1,18 +1,17 @@
-
 import numpy as np
 
-class Plate:
 
+class Plate:
     def __init__(self, p1, p2, p3, p4) -> None:
         self.p1 = np.array(p1)
         self.p2 = np.array(p2)
         self.p3 = np.array(p3)
         self.p4 = np.array(p4)
-    
+
     @property
     def d12(self):
         return self.p2 - self.p1
-    
+
     @property
     def l12(self):
         return np.linalg.norm(self.d12)
@@ -62,16 +61,16 @@ class RectangularPlate(Plate):
 
     @property
     def n12(self):
-        return self.d12/self.chord
+        return self.d12 / self.chord
 
     @property
     def n14(self):
-        return self.d14/self.span
+        return self.d14 / self.span
 
     @property
     def normal(self):
         vec = np.cross(self.d12, self.d14)
-        return vec/np.linalg.norm(vec)
+        return vec / np.linalg.norm(vec)
 
     @property
     def span(self):
