@@ -1,6 +1,45 @@
 [build-system]
-requires = [
-    "setuptools>=42",
-    "wheel"
-]
+requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "nastran-aeroelasticity"
+version = "0.2.1"
+authors = [
+    {name = "Victor Santos", email = "victorsantos@ufmg.br"},
+]
+description = "Some useful routines for aeroelastic analysis with NASTRAN"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.9"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "matplotlib>=3.7",
+    "numpy>=1.24",
+    "pyNastran>=1.4",
+    "pandas>=2.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/vsdsantos/nastran-aeroelasticity"
+"Bug Tracker" = "https://github.com/vsdsantos/nastran-aeroelasticity/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[dependency-groups]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "flake8>=6.0",
+    "flake8-html>=0.4",
+    "build>=1.0",
+    "openpyxl>=3.1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
