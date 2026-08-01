@@ -1,22 +1,40 @@
-from abc import ABC, abstractmethod
-from typing import Dict, Type
-from numpy.lib.utils import deprecate
+from __future__ import annotations
 
-# import yaml
+import functools
+import warnings
+from abc import ABC, abstractmethod
+
 from pyNastran.bdf.bdf import BDF, CaseControlDeck
 
 from nastran.utils import IdUtility, set_object_properties
 
+
+def _deprecated(func):
+    """Mark a method as deprecated; emits a DeprecationWarning on first call."""
+
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        warnings.warn(
+            f"{func.__qualname__} is deprecated and will be removed in a future version.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return func(*args, **kwargs)
+
+    return wrapper
+
+
 class ExecutiveControl:
     pass
 
-class CaseControl:
 
+class CaseControl:
     @classmethod
     def create_from_dict(cls, data, **args):
         cc = cls()
         set_object_properties(cc, data)
         return cc
+
 
 class Subcase(CaseControl):
     """
@@ -45,15 +63,18 @@ class Subcase(CaseControl):
         set_object_properties(subcase, data)
         return subcase
 
+
 class AnalysisModel(ABC):
-    
-    def __init__(self, model:BDF=None,
-                 global_case=None,
-                 subcases:Dict[int,Subcase]=None,
-                 params=None,
-                 diags=None,
-                 sol=None,
-                 interface=None):
+    def __init__(
+        self,
+        model: BDF = None,
+        global_case=None,
+        subcases: dict[int, Subcase] | None = None,
+        params=None,
+        diags=None,
+        sol=None,
+        interface=None,
+    ):
         self.model = model if model is not None else BDF(debug=False)
         self.idutil = IdUtility(self.model)
         self.global_case = global_case if global_case is not None else CaseControl()
@@ -66,7 +87,7 @@ class AnalysisModel(ABC):
     def __repr__(self) -> str:
         return self.model.get_bdf_stats()
 
-    @deprecate
+    @_deprecated
     def import_from_bdf(self, bdf_file_name: str, sanitize: bool = True, reset_bdf: bool = False):
         # load models and utility
         base_model = BDF(debug=False)
@@ -84,8 +105,18 @@ class AnalysisModel(ABC):
         # TODO: make whitelist of structural elements, properties and spcs or resolve the importing other way
 
         if sanitize:
-            block_list = ['ENDDATA', 'PARAM', 'EIGR', 'CAERO1', 'CAERO2', 'PAERO1', 'PAERO2', 'SPLINE1', 'SPLINE2',
-                          'EIGRL']
+            block_list = [
+                "ENDDATA",
+                "PARAM",
+                "EIGR",
+                "CAERO1",
+                "CAERO2",
+                "PAERO1",
+                "PAERO2",
+                "SPLINE1",
+                "SPLINE2",
+                "EIGRL",
+            ]
         else:
             block_list = []
         sanit_card_keys = list(filter(lambda c: c not in block_list, cards))
@@ -93,12 +124,12 @@ class AnalysisModel(ABC):
 
         for key in sanit_cards:
             for card in sanit_cards[key]:
-                lines = card.write_card().split('\n')
+                lines = card.write_card().split("\n")
                 comments = []
-                while lines[0].strip('')[0] == '$':  # separate comments
+                while lines[0].strip("")[0] == "$":  # separate comments
                     comments.append(lines.pop(0))
                 self.model.add_card_lines(lines, key, comment=comments)
-        print('Done!')
+        print("Done!")
 
     # @deprecate
     # def load_analysis_from_yaml(self, yaml_file_name: str):
@@ -113,15 +144,15 @@ class AnalysisModel(ABC):
     def set_global_case_from_dict(self, data):
         self.global_case = CaseControl.create_from_dict(data)
 
-#     def create_subcase_from_yaml(self, sub_type: Type[Subcase], sub_id, subcase_file_name):
-#         # assert sub_id not in self.subcases.keys()
-        
-#         sub = sub_type.create_from_yaml(subcase_file_name)
-#         self.subcases[sub_id] = sub
+    #     def create_subcase_from_yaml(self, sub_type: Type[Subcase], sub_id, subcase_file_name):
+    #         # assert sub_id not in self.subcases.keys()
 
-#         return sub
+    #         sub = sub_type.create_from_yaml(subcase_file_name)
+    #         self.subcases[sub_id] = sub
 
-    def create_subcase_from_dict(self, sub_type: Type[Subcase], sub_id, sub_dict):
+    #         return sub
+
+    def create_subcase_from_dict(self, sub_type: type[Subcase], sub_id, sub_dict):
         # assert sub_id not in self.subcases.keys()
 
         sub = sub_type.create_from_dict(sub_id, sub_dict)
@@ -129,19 +160,19 @@ class AnalysisModel(ABC):
 
         return sub
 
-    def create_subcase(self, sub_type: Type[Subcase], sub_id):
+    def create_subcase(self, sub_type: type[Subcase], sub_id):
         # assert sub_id not in self.subcases.keys()
-        
-        sub = sub_type.create_from_dict()
+
+        sub = sub_type.create_from_dict(sub_id, {})
         self.subcases[sub_id] = sub
 
         return sub
 
     def export_to_bdf(self, output_bdf):
         # Write output
-        print('Writing bdf file...')
+        print("Writing bdf file...")
         self.model.write_bdf(output_bdf, enddata=True)
-        print('Done!')
+        print("Done!")
 
     def write_cards(self):
         self.model.case_control_deck = CaseControlDeck([])
@@ -165,11 +196,17 @@ class AnalysisModel(ABC):
     def _write_case_control_subcase(self, subcase: Subcase):
         # if subcase.case_control is not None:
         for key, value in subcase.properties.items():
-            if key in ['id',] or value is None:
+            if (
+                key
+                in [
+                    "id",
+                ]
+                or value is None
+            ):
                 continue
             self.model.case_control_deck.add_parameter_to_local_subcase(
-                subcase.id,
-                f"{key.upper()} = {value}")
+                subcase.id, f"{key.upper()} = {value}"
+            )
 
     def _write_case_control_cards(self):
         # Case Control
@@ -182,18 +219,17 @@ class AnalysisModel(ABC):
             self._write_case_control_subcase(subcase)
         self.model.case_control_deck = cc
 
+    @abstractmethod
     def _write_global_analysis_cards(self):
         pass
 
     def _write_params(self):
         # params
-        if self.params == None:
-            print('WARNING: No PARAMS defined')
+        if self.params is None:
+            print("WARNING: No PARAMS defined")
         else:
             for key, param in self.params.items():
-                if hasattr(param, '__iter__'):  # check if object is iterable
+                if hasattr(param, "__iter__"):  # check if object is iterable
                     self.model.add_param(key=key, values=list(param))
                 else:
                     self.model.add_param(key=key, values=[param])
-        
-

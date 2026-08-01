@@ -1,6 +1,88 @@
 [build-system]
-requires = [
-    "setuptools>=42",
-    "wheel"
-]
+requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "nastran-aeroelasticity"
+version = "0.2.1"
+authors = [
+    {name = "Victor Santos", email = "victorsantos@ufmg.br"},
+]
+description = "Some useful routines for aeroelastic analysis with NASTRAN"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.9"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "matplotlib>=3.7",
+    "numpy>=1.24",
+    "pyNastran>=1.4",
+    "pandas>=2.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/vsdsantos/nastran-aeroelasticity"
+"Bug Tracker" = "https://github.com/vsdsantos/nastran-aeroelasticity/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[dependency-groups]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "ruff>=0.5",
+    "mypy>=1.10",
+    "pandas-stubs>=2.0",
+    "build>=1.0",
+    "openpyxl>=3.1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+# ---------------------------------------------------------------------------
+# Ruff — linter + formatter (replaces flake8, isort, pyupgrade, etc.)
+# ---------------------------------------------------------------------------
+[tool.ruff]
+src = ["src"]
+target-version = "py39"
+line-length = 100
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "SIM", # flake8-simplify
+    "RUF", # ruff-specific rules
+]
+ignore = [
+    "E501",   # line too long (handled by formatter)
+    "SIM108", # ternary operator — not always cleaner
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["nastran"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+# ---------------------------------------------------------------------------
+# Mypy — static type checker
+# ---------------------------------------------------------------------------
+[tool.mypy]
+python_version = "3.10"
+files = ["src"]
+ignore_missing_imports = true
+warn_unused_ignores = true
+warn_return_any = false

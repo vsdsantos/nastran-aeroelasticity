@@ -1,11 +1,11 @@
-
-from typing import Dict
-from pyNastran.bdf.bdf import BDF, CaseControlDeck
-from nastran.aero.superpanels import SuperAeroPanel5
-
-from nastran.analysis import AnalysisModel, Subcase
+from __future__ import annotations
 
 import numpy as np
+from pyNastran.bdf.bdf import BDF
+
+from nastran.aero.superpanels import SuperAeroPanel5
+from nastran.analysis import AnalysisModel, Subcase
+
 
 class ThermoSubcase(Subcase):
     """
@@ -23,13 +23,24 @@ class SteadyStateThermoAnalysisModel(AnalysisModel):
 
     """
 
-    def __init__(self, model: BDF = None, global_case = None,
-                 subcases: Dict[int, Subcase] = {},
-                 params=None, diags=None, interface=None):
-        super().__init__(model=model,
-            global_case=global_case, subcases=subcases,
-            params=params, diags=diags,
-            sol=153, interface=interface)
+    def __init__(
+        self,
+        model: BDF = None,
+        global_case=None,
+        subcases: dict[int, Subcase] | None = None,
+        params=None,
+        diags=None,
+        interface=None,
+    ):
+        super().__init__(
+            model=model,
+            global_case=global_case,
+            subcases=subcases,
+            params=params,
+            diags=diags,
+            sol=153,
+            interface=interface,
+        )
         self.init_temp = None
         self.max_temp = None
         self.ni = None
@@ -42,16 +53,16 @@ class SteadyStateThermoAnalysisModel(AnalysisModel):
         cc = self.model.case_control_deck
 
         self.model.add_tempd(1, 0.0)
-        cc.add_parameter_to_global_subcase('TEMP(INIT) = %d' % 1)
+        cc.add_parameter_to_global_subcase(f"TEMP(INIT) = {1}")
 
         temp_cases = np.linspace(self.init_temp, self.max_temp, self.ni)
 
         for i, t in enumerate(temp_cases):
-            self.model.add_tempd(10+i, t)
-            self.model.add_nlparm(10+i, 1, kmethod='ITER', kstep=1, int_out='YES')
-            cc.create_new_subcase(1+i)
-            cc.add_parameter_to_local_subcase(1+i, 'TEMP(LOAD) = %d' % (10+i))
-            cc.add_parameter_to_local_subcase(1+i, 'NLPARM = %d' % (10+i))
+            self.model.add_tempd(10 + i, t)
+            self.model.add_nlparm(10 + i, 1, kmethod="ITER", kstep=1, int_out="YES")
+            cc.create_new_subcase(1 + i)
+            cc.add_parameter_to_local_subcase(1 + i, f"TEMP(LOAD) = {10 + i}")
+            cc.add_parameter_to_local_subcase(1 + i, f"NLPARM = {10 + i}")
 
     def write_cord2r_cards(self, superpanel: SuperAeroPanel5):
         cords = []
@@ -69,9 +80,8 @@ class SteadyStateThermoAnalysisModel(AnalysisModel):
 
             # local aerodynamic coordinate system
             cords.append(
-                self.model.add_cord2r(self.idutil.get_next_coord_id(),
-                                      origin,
-                                      origin + panel.normal,
-                                      pxz_i)
-                        )
+                self.model.add_cord2r(
+                    self.idutil.get_next_coord_id(), origin, origin + panel.normal, pxz_i
+                )
+            )
         return cords
