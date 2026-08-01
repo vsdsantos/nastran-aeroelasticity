@@ -12,8 +12,8 @@ class ThermoSubcase(Subcase):
     This class represents the requirements to the Aeroelastic Flutter Solution 145 of NASTRAN.
     """
 
-    def __init__(self, id, spc=None, temp=None, **args):
-        super().__init__(id, spc=spc, load=None, **args)
+    def __init__(self, sub_id, spc=None, temp=None, **args):
+        super().__init__(sub_id, spc=spc, load=None, **args)
         self.temp = temp
 
 
@@ -44,9 +44,6 @@ class SteadyStateThermoAnalysisModel(AnalysisModel):
         self.init_temp = None
         self.max_temp = None
         self.ni = None
-
-    def write_cards(self):
-        super().write_cards()
 
     def _write_global_analysis_cards(self):
 

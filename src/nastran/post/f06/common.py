@@ -60,8 +60,7 @@ def extract_tabulated_data(lines):
                 e = float(entry)
             except ValueError:
                 e = np.nan
-            finally:
-                inner_data.append(e)
+            inner_data.append(e)
         data.append(inner_data)
     return data
 

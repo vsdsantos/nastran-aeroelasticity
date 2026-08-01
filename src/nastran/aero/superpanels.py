@@ -65,8 +65,8 @@ class SuperAeroPanel1(SuperAeroPanel):
 
         p1r = self.p4
         p2r = self.p3
-        p3r = [*self.p3, 0, element_size * lateral_n, 0]
-        p4r = [*self.p4, 0, element_size * lateral_n, 0]
+        p3r = self.p3 + np.array([0, element_size * lateral_n, 0])
+        p4r = self.p4 + np.array([0, element_size * lateral_n, 0])
         right_panel = AeroPanel1(p1r, p2r, p3r, p4r, lateral_n, self.nchord)
 
         self.aeropanels["main"] = main_panel

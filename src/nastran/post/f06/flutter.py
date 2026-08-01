@@ -215,13 +215,13 @@ def _is_continuation(i, pages):
     return False
 
 
-def _create_multiindex(info, range):
+def _create_multiindex(info, idx_range):
     header = [
         [info["SUBCASE"]],
         [info["MACH NUMBER"]],
         [info["POINT"]],
         # [info['DENSITY RATIO']],
-        range,
+        idx_range,
     ]
 
     return pd.MultiIndex.from_product(header, names=["SUBCASE", "MACH NUMBER", "POINT", "INDEX"])

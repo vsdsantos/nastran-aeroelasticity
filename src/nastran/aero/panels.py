@@ -62,5 +62,5 @@ class AeroPanel5(AeroPanel):
         self.thickness_integrals = thickness_int
         self.control_surface_ratios = control_surf
         if theory not in self.THEORIES:
-            raise Exception(f"Theory {theory} for CAERO5 is not present.")
+            raise ValueError(f"Theory {theory} for CAERO5 is not present.")
         self.theory = self.THEORIES[theory]

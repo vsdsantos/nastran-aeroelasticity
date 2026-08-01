@@ -41,8 +41,8 @@ class Subcase(CaseControl):
     Represents a NASTRAN subcase with CASE CONTROL statements.
     """
 
-    def __init__(self, id, spc=None, load=None, **args):
-        self.id = id
+    def __init__(self, sub_id, spc=None, load=None, **args):
+        self.id = sub_id
         self.spc = spc
         self.load = load
         set_object_properties(self, args)

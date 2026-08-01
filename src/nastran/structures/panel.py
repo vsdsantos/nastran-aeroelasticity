@@ -26,7 +26,7 @@ class StructuralPlate(RectangularPlate):
                 self.spanwise_nodes[0],
                 self.spanwise_nodes[-1],
             ]
-        raise Exception("Not implemented")
+        raise NotImplementedError("Not implemented")
 
     @property
     def corner_nodes(self):

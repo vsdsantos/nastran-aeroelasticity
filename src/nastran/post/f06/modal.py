@@ -22,15 +22,14 @@ def _parse_content(content):
                 e = float(entry)
             except ValueError:
                 e = np.nan
-            finally:
-                inner_data.append(e)
+            inner_data.append(e)
         data.append(inner_data)
 
     return data
 
 
 def read_modal_f06(filename: str):
-    with open(filename) as file:
+    with open(filename, encoding="utf-8") as file:
         raw_lines = file.readlines()
 
     for i, line in enumerate(raw_lines):
@@ -49,3 +48,5 @@ def read_modal_f06(filename: str):
             df = pd.DataFrame(parsed_data, columns=list(MODAL_REAL_EIGV_KEYS.keys()))
 
             return df
+
+    return None

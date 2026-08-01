@@ -16,7 +16,7 @@ PAGE_PARSING_FUNCTIONS: dict[str, Any] = {
     "eigvalsummary": "",
     "realeigval": parse_realeigval_page,
     "ModalEffectiveMassFractionF06Page": ModalEffectiveMassFractionF06Page.parse_page,
-    "text": lambda ls: "\n".join(ls),
+    "text": "\n".join,
 }
 
 FLUTTER_CHECK_LINE = 3
@@ -80,7 +80,7 @@ class F06Results:
 
 
 def read_f06(filename: str):
-    with open(filename) as file:
+    with open(filename, encoding="utf-8") as file:
         raw_lines = file.readlines()
 
     groups = _group_lines_by_page(raw_lines)
@@ -102,20 +102,19 @@ def read_f06(filename: str):
 def _check_page_type(lines, previous_page_type=None) -> str:
     if len(lines) - 1 >= FLUTTER_CHECK_LINE and FLUTTER_CHECK_STR in lines[FLUTTER_CHECK_LINE]:
         return "flutter"
-    elif (
+    if (
         len(lines) - 1 >= EIGVALSUMMARY_CHECK_LINE
         and EIGVALSUMMARY_CHECK_STR in lines[EIGVALSUMMARY_CHECK_LINE]
     ):
         return "text"  # TODO: add support for the eigenval summary data
-    elif (
+    if (
         len(lines) - 1 >= REALEIGVAL_CHECK_LINE
         and REALEIGVAL_CHECK_STR in lines[REALEIGVAL_CHECK_LINE]
     ):
         return "realeigval"
-    elif ModalEffectiveMassFractionF06Page.is_page_of_this_type(lines, previous_page_type):
+    if ModalEffectiveMassFractionF06Page.is_page_of_this_type(lines, previous_page_type):
         return "ModalEffectiveMassFractionF06Page"
-    else:
-        return "text"
+    return "text"
 
 
 def _group_lines_by_page(lines):

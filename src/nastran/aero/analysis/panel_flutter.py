@@ -10,9 +10,9 @@ from nastran.analysis import Subcase
 
 class PanelFlutterSubcase(FlutterSubcase):
     def __init__(
-        self, id, spc=None, fmethod=None, method=None, plate_stiffness=None, vref=None, **args
+        self, sub_id, spc=None, fmethod=None, method=None, plate_stiffness=None, vref=None, **args
     ):
-        super().__init__(id, spc=spc, fmethod=fmethod, method=method, **args)
+        super().__init__(sub_id, spc=spc, fmethod=fmethod, method=method, **args)
         self.plate_stiffness = plate_stiffness
         self.vref = vref
 

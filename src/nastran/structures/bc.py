@@ -70,8 +70,7 @@ def create_spcs(analysis: AnalysisModel, spcs_dict, nodes):
         for comp, nds in zip(spcs.get_bc_ids(), nodes):
             if comp == "":
                 continue
-            else:
-                yield (spcs.label, analysis.model.add_spc1(spc_id, comp, nds, comment=spcs.label))
+            yield (spcs.label, analysis.model.add_spc1(spc_id, comp, nds, comment=spcs.label))
 
 
 def create_springs(analysis, nodes):

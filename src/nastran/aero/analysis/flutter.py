@@ -21,8 +21,8 @@ class FlutterSubcase(Subcase):
     This class represents the requirements to the Aeroelastic Flutter Solution 145 of NASTRAN.
     """
 
-    def __init__(self, id, spc=None, fmethod=None, method=None, **args):
-        super().__init__(id, spc=spc, load=None, **args)
+    def __init__(self, sub_id, spc=None, fmethod=None, method=None, **args):
+        super().__init__(sub_id, spc=spc, load=None, **args)
         self.fmethod = fmethod
         self.method = method
 
@@ -53,9 +53,6 @@ class FlutterAnalysisModel(AnalysisModel):
             interface=interface,
         )
 
-    def write_cards(self):
-        super().write_cards()
-
     def _write_machs_and_alphas(self, machs, alphas):
         # TODO: Vary with the used flutter solution method
 
@@ -64,7 +61,7 @@ class FlutterAnalysisModel(AnalysisModel):
                 self.idutil.get_next_aefact_id(), [v for ma in zip(machs, alphas) for v in ma]
             )
         else:
-            raise Exception(f"Selected {self.global_case.method} method is not implemented")
+            raise NotImplementedError(f"Selected {self.global_case.method} method is not implemented")
 
         return aefact
 

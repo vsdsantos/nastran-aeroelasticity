@@ -2,8 +2,8 @@ from nastran.analysis import AnalysisModel, Subcase
 
 
 class LinearBucklingSubcase(Subcase):
-    def __init__(self, id, spc=None, load=None, **args):
-        super().__init__(id, spc=spc, load=load, **args)
+    def __init__(self, sub_id, spc=None, load=None, **args):
+        super().__init__(sub_id, spc=spc, load=load, **args)
 
 
 class LinearBucklingAnalysis(AnalysisModel):
